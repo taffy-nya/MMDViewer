@@ -1,0 +1,5 @@
+{
+    "taffycode.compileAndRunCommands": {
+        "cpp": "rm -r -fo ./build; mkdir build; cd build; cmake ..; make; cd ..; ./build/main",
+    }
+}

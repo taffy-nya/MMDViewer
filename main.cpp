@@ -12,14 +12,14 @@ const std::string pmx_path = "models/taffy/taffy.pmx";
 glm::vec3 scaleTheta(1.0f), rotateTheta(0.0f), translateTheta(0.0f);
 double brightness = 1.0;
 bool mouseLeftPressed = false, mouseRightPressed = false, mouseMiddlePressed = false;
+bool needsRedraw = true; // 优化：仅在需要时重绘
 double rotateSensitivity = 0.2, translateSensitivity = 0.02, brightnessSensitivity = 0.01;
 double lastX, lastY;
 glm::vec3 cameraPos = glm::vec3(0.0f, 10.0f, 35.0f), cameraFront = glm::vec3(0.0f, 0.0f, -1.0f), cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 float cameraZoomSensitivity = 1.0f;
 glm::vec3 lightPos(0.0f, 50.0f, 50.0f);
 
-struct OpenGLObject
-{
+struct OpenGLObject {
     GLuint vao = 0, vbo = 0, ebo = 0, program = 0;
     
     // Uniform locations are now cached here
@@ -192,14 +192,17 @@ void display() {
 }
 
 // --- 回调函数与主循环 ---
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) { glViewport(0, 0, width, height); }
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) { 
+    glViewport(0, 0, width, height); 
+    needsRedraw = true; // 优化：窗口变化时请求重绘
+}
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     double deltaX = xpos - lastX;
     double deltaY = ypos - lastY;
-    if (mouseLeftPressed) { rotateTheta.y += deltaX * rotateSensitivity; rotateTheta.x += deltaY * rotateSensitivity; }
-    if (mouseRightPressed) { translateTheta.x += deltaX * translateSensitivity; translateTheta.y -= deltaY * translateSensitivity; }
-    if (mouseMiddlePressed) { brightness -= deltaY * brightnessSensitivity; brightness = glm::clamp(brightness, 0.0, 10.0); }
+    if (mouseLeftPressed) { rotateTheta.y += deltaX * rotateSensitivity; rotateTheta.x += deltaY * rotateSensitivity; needsRedraw = true; }
+    if (mouseRightPressed) { translateTheta.x += deltaX * translateSensitivity; translateTheta.y -= deltaY * translateSensitivity; needsRedraw = true; }
+    if (mouseMiddlePressed) { brightness -= deltaY * brightnessSensitivity; brightness = glm::clamp(brightness, 0.0, 10.0); needsRedraw = true; }
     lastX = xpos; lastY = ypos;
 }
 
@@ -218,11 +221,13 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     cameraPos += (float)yoffset * cameraFront * cameraZoomSensitivity;
+    needsRedraw = true; // 优化：滚动时请求重绘
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
     float cameraSpeed = 0.5f;
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+        bool changed = true; // 优化：检查按键是否真的改变了视图
         switch (key) {
             case GLFW_KEY_W: cameraPos += cameraSpeed * cameraFront; break;
             case GLFW_KEY_S: cameraPos -= cameraSpeed * cameraFront; break;
@@ -234,6 +239,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case GLFW_KEY_2: glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); break;
             case GLFW_KEY_R: reset(); break;
             case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GL_TRUE); break;
+            default: changed = false; break; // 如果按键未处理，则不重绘
+        }
+        if (changed) {
+            needsRedraw = true; // 优化：仅在视图改变时请求重绘
         }
     }
 }
@@ -270,6 +279,7 @@ void reset() {
     brightness = 1.0;
     cameraPos = glm::vec3(0.0f, 10.0f, 35.0f);
     cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    needsRedraw = true; // 优化：重置后请求重绘
 }
 
 int main(int argc, char** argv) {
@@ -304,9 +314,12 @@ int main(int argc, char** argv) {
     printHelp();
 
     while (!glfwWindowShouldClose(window)) {
-        display();
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        if (needsRedraw) {
+            display();
+            glfwSwapBuffers(window);
+            needsRedraw = false; // 重绘后重置标志
+        }
+        glfwWaitEvents(); // 优化：等待事件而不是轮询
     }
 
     cleanUp();
