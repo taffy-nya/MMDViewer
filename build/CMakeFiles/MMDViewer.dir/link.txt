@@ -1,0 +1,3 @@
+C:\PATH\cmake\bin\cmake.exe -E rm -f CMakeFiles\MMDViewer.dir/objects.a
+C:\PROGRA~1\msys64\ucrt64\bin\ar.exe qc CMakeFiles\MMDViewer.dir/objects.a @CMakeFiles\MMDViewer.dir\objects1.rsp
+C:\PROGRA~1\msys64\ucrt64\bin\g++.exe -g -Wl,--whole-archive CMakeFiles\MMDViewer.dir/objects.a -Wl,--no-whole-archive -o MMDViewer.exe -Wl,--out-implib,libMMDViewer.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\MMDViewer.dir\linkLibs.rsp

@@ -28,7 +28,6 @@ set(CMAKE_MAKEFILE_DEPENDS
   "C:/PATH/cmake/share/cmake-3.31/Modules/CMakeGenericSystem.cmake"
   "C:/PATH/cmake/share/cmake-3.31/Modules/CMakeInitializeConfigs.cmake"
   "C:/PATH/cmake/share/cmake-3.31/Modules/CMakeLanguageInformation.cmake"
-  "C:/PATH/cmake/share/cmake-3.31/Modules/CMakeMinGWFindMake.cmake"
   "C:/PATH/cmake/share/cmake-3.31/Modules/CMakeParseImplicitIncludeInfo.cmake"
   "C:/PATH/cmake/share/cmake-3.31/Modules/CMakeParseImplicitLinkInfo.cmake"
   "C:/PATH/cmake/share/cmake-3.31/Modules/CMakeParseLibraryArchitecture.cmake"
@@ -160,5 +159,5 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
-  "CMakeFiles/main.dir/DependInfo.cmake"
+  "CMakeFiles/MMDViewer.dir/DependInfo.cmake"
   )

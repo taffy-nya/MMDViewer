@@ -54,6 +54,17 @@ public:
     void loadOpenGLTextures(const std::string& modelBasePath);
     void cleanData();
 
+    // Transformation methods
+    void setTranslation(const glm::vec3& t) { translation = t; }
+    void setRotation(const glm::vec3& r) { rotation = r; }
+    void setScale(const glm::vec3& s) { scale = s; }
+    
+    glm::vec3 getTranslation() const { return translation; }
+    glm::vec3 getRotation() const { return rotation; }
+    glm::vec3 getScale() const { return scale; }
+
+    glm::mat4 getModelMatrix();
+
     // Getter functions
     const std::vector<glm::vec3>& getVertexPositions() const { return vertex_positions; }
     const std::vector<glm::vec3>& getVertexNormals() const { return vertex_normals; }
@@ -69,6 +80,11 @@ private:
     std::vector<vec3u> faces;
     std::vector<MaterialInfo> materials;
     std::vector<TextureInfo> textures;
+
+    // Transformation state
+    glm::vec3 translation = glm::vec3(0.0f);
+    glm::vec3 rotation = glm::vec3(0.0f);
+    glm::vec3 scale = glm::vec3(1.0f);
 };
 
 #endif

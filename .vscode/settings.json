@@ -1,5 +1,7 @@
 {
     "taffycode.compileAndRunCommands": {
-        "cpp": "rm -r -fo ./build; mkdir build; cd build; cmake ..; make; cd ..; ./build/main",
-    }
+        // "cpp": "rm -r -fo ./build; mkdir build; cd build; cmake ..; make; cd ..; ./build/MMDViewer",
+        "cpp": "cd build; cmake ..; make; cd ..; ./build/MMDViewer"
+    },
+    "C_Cpp.default.compilerPath": "C:/Program Files/msys64/ucrt64/bin/g++.exe"
 }

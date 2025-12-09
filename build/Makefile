@@ -116,24 +116,48 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named main
+# Target rules for targets named MMDViewer
 
 # Build rule for target.
-main: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 main
-.PHONY : main
+MMDViewer: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 MMDViewer
+.PHONY : MMDViewer
 
 # fast build rule for target.
-main/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/build
-.PHONY : main/fast
+MMDViewer/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/build
+.PHONY : MMDViewer/fast
+
+Camera.obj: Camera.cpp.obj
+.PHONY : Camera.obj
+
+# target to build an object file
+Camera.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/Camera.cpp.obj
+.PHONY : Camera.cpp.obj
+
+Camera.i: Camera.cpp.i
+.PHONY : Camera.i
+
+# target to preprocess a source file
+Camera.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/Camera.cpp.i
+.PHONY : Camera.cpp.i
+
+Camera.s: Camera.cpp.s
+.PHONY : Camera.s
+
+# target to generate assembly for a file
+Camera.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/Camera.cpp.s
+.PHONY : Camera.cpp.s
 
 InitShader.obj: InitShader.cpp.obj
 .PHONY : InitShader.obj
 
 # target to build an object file
 InitShader.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/InitShader.cpp.obj
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/InitShader.cpp.obj
 .PHONY : InitShader.cpp.obj
 
 InitShader.i: InitShader.cpp.i
@@ -141,7 +165,7 @@ InitShader.i: InitShader.cpp.i
 
 # target to preprocess a source file
 InitShader.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/InitShader.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/InitShader.cpp.i
 .PHONY : InitShader.cpp.i
 
 InitShader.s: InitShader.cpp.s
@@ -149,15 +173,63 @@ InitShader.s: InitShader.cpp.s
 
 # target to generate assembly for a file
 InitShader.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/InitShader.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/InitShader.cpp.s
 .PHONY : InitShader.cpp.s
+
+MMDViewer.obj: MMDViewer.cpp.obj
+.PHONY : MMDViewer.obj
+
+# target to build an object file
+MMDViewer.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/MMDViewer.cpp.obj
+.PHONY : MMDViewer.cpp.obj
+
+MMDViewer.i: MMDViewer.cpp.i
+.PHONY : MMDViewer.i
+
+# target to preprocess a source file
+MMDViewer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/MMDViewer.cpp.i
+.PHONY : MMDViewer.cpp.i
+
+MMDViewer.s: MMDViewer.cpp.s
+.PHONY : MMDViewer.s
+
+# target to generate assembly for a file
+MMDViewer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/MMDViewer.cpp.s
+.PHONY : MMDViewer.cpp.s
+
+MeshPainter.obj: MeshPainter.cpp.obj
+.PHONY : MeshPainter.obj
+
+# target to build an object file
+MeshPainter.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/MeshPainter.cpp.obj
+.PHONY : MeshPainter.cpp.obj
+
+MeshPainter.i: MeshPainter.cpp.i
+.PHONY : MeshPainter.i
+
+# target to preprocess a source file
+MeshPainter.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/MeshPainter.cpp.i
+.PHONY : MeshPainter.cpp.i
+
+MeshPainter.s: MeshPainter.cpp.s
+.PHONY : MeshPainter.s
+
+# target to generate assembly for a file
+MeshPainter.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/MeshPainter.cpp.s
+.PHONY : MeshPainter.cpp.s
 
 TriMesh.obj: TriMesh.cpp.obj
 .PHONY : TriMesh.obj
 
 # target to build an object file
 TriMesh.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/TriMesh.cpp.obj
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/TriMesh.cpp.obj
 .PHONY : TriMesh.cpp.obj
 
 TriMesh.i: TriMesh.cpp.i
@@ -165,7 +237,7 @@ TriMesh.i: TriMesh.cpp.i
 
 # target to preprocess a source file
 TriMesh.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/TriMesh.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/TriMesh.cpp.i
 .PHONY : TriMesh.cpp.i
 
 TriMesh.s: TriMesh.cpp.s
@@ -173,7 +245,7 @@ TriMesh.s: TriMesh.cpp.s
 
 # target to generate assembly for a file
 TriMesh.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/TriMesh.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/TriMesh.cpp.s
 .PHONY : TriMesh.cpp.s
 
 glad.obj: glad.c.obj
@@ -181,7 +253,7 @@ glad.obj: glad.c.obj
 
 # target to build an object file
 glad.c.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/glad.c.obj
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/glad.c.obj
 .PHONY : glad.c.obj
 
 glad.i: glad.c.i
@@ -189,7 +261,7 @@ glad.i: glad.c.i
 
 # target to preprocess a source file
 glad.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/glad.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/glad.c.i
 .PHONY : glad.c.i
 
 glad.s: glad.c.s
@@ -197,32 +269,8 @@ glad.s: glad.c.s
 
 # target to generate assembly for a file
 glad.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/glad.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/glad.c.s
 .PHONY : glad.c.s
-
-main.obj: main.cpp.obj
-.PHONY : main.obj
-
-# target to build an object file
-main.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/main.cpp.obj
-.PHONY : main.cpp.obj
-
-main.i: main.cpp.i
-.PHONY : main.i
-
-# target to preprocess a source file
-main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/main.cpp.i
-.PHONY : main.cpp.i
-
-main.s: main.cpp.s
-.PHONY : main.s
-
-# target to generate assembly for a file
-main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.dir\build.make CMakeFiles/main.dir/main.cpp.s
-.PHONY : main.cpp.s
 
 # Help Target
 help:
@@ -232,19 +280,25 @@ help:
 	@echo ... depend
 	@echo ... edit_cache
 	@echo ... rebuild_cache
-	@echo ... main
+	@echo ... MMDViewer
+	@echo ... Camera.obj
+	@echo ... Camera.i
+	@echo ... Camera.s
 	@echo ... InitShader.obj
 	@echo ... InitShader.i
 	@echo ... InitShader.s
+	@echo ... MMDViewer.obj
+	@echo ... MMDViewer.i
+	@echo ... MMDViewer.s
+	@echo ... MeshPainter.obj
+	@echo ... MeshPainter.i
+	@echo ... MeshPainter.s
 	@echo ... TriMesh.obj
 	@echo ... TriMesh.i
 	@echo ... TriMesh.s
 	@echo ... glad.obj
 	@echo ... glad.i
 	@echo ... glad.s
-	@echo ... main.obj
-	@echo ... main.i
-	@echo ... main.s
 .PHONY : help
 
 

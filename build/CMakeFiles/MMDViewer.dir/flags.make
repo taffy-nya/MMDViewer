@@ -5,13 +5,13 @@
 # compile CXX with C:/Program Files/msys64/ucrt64/bin/g++.exe
 C_DEFINES = -DGLFW_DLL
 
-C_INCLUDES = @CMakeFiles/main.dir/includes_C.rsp
+C_INCLUDES = @CMakeFiles/MMDViewer.dir/includes_C.rsp
 
-C_FLAGS = 
+C_FLAGS = -g
 
 CXX_DEFINES = -DGLFW_DLL
 
-CXX_INCLUDES = @CMakeFiles/main.dir/includes_CXX.rsp
+CXX_INCLUDES = @CMakeFiles/MMDViewer.dir/includes_CXX.rsp
 
-CXX_FLAGS = -std=c++20
+CXX_FLAGS = -g -std=c++20
 

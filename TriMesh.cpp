@@ -6,6 +6,7 @@
 #include <windows.h>
 #endif
 
+#include "Angel.h"
 #include "TriMesh.h"
 #include <vector>
 #include <iostream>
@@ -33,7 +34,6 @@ std::string readPmxString(std::ifstream& file, int text_encoding) {
     if (!file) return "";
     if (text_encoding == 1) { return std::string(buffer.begin(), buffer.end()); }
     else {
-#ifdef _WIN32
         const wchar_t* w_str = reinterpret_cast<const wchar_t*>(buffer.data());
         int w_len = string_length / sizeof(wchar_t);
         int utf8_size = WideCharToMultiByte(CP_UTF8, 0, w_str, w_len, NULL, 0, NULL, NULL);
@@ -41,9 +41,6 @@ std::string readPmxString(std::ifstream& file, int text_encoding) {
         std::string utf8_str(utf8_size, 0);
         WideCharToMultiByte(CP_UTF8, 0, w_str, w_len, &utf8_str[0], utf8_size, NULL, NULL);
         return utf8_str;
-#else
-        return "";
-#endif
     }
 }
 
@@ -165,4 +162,14 @@ void TriMesh::loadOpenGLTextures(const std::string& modelBasePath) {
         }
         stbi_image_free(data);
     }
+}
+
+glm::mat4 TriMesh::getModelMatrix() {
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, translation);
+    model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::scale(model, scale);
+    return model;
 }

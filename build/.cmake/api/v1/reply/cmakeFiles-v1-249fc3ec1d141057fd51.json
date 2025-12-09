@@ -21,11 +21,6 @@
 		{
 			"isCMake" : true,
 			"isExternal" : true,
-			"path" : "C:/PATH/cmake/share/cmake-3.31/Modules/CMakeMinGWFindMake.cmake"
-		},
-		{
-			"isCMake" : true,
-			"isExternal" : true,
 			"path" : "C:/PATH/cmake/share/cmake-3.31/Modules/CMakeSystemSpecificInitialize.cmake"
 		},
 		{
