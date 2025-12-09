@@ -1,6 +1,5 @@
 #include "MeshPainter.h"
 #include "Angel.h"
-#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
 MeshPainter::MeshPainter() {}

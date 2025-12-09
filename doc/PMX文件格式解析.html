@@ -1,0 +1,3198 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="never" />
+    <meta name="keywords" content="MMD" />
+    <meta name="description" content="![](https://upload-images.jianshu.io/upload_images/7875603-c23444ef52424dd4.png?imageMogr2/auto-orient/strip|imageView2/2/w/1200/format/webp) # 一、前言 P" />
+    <meta property="og:description" content="![](https://upload-images.jianshu.io/upload_images/7875603-c23444ef52424dd4.png?imageMogr2/auto-orient/strip|imageView2/2/w/1200/format/webp) # 一、前言 P" />
+    <meta property="og:image" content="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903488-1309660643.svg" />
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>【MMD】PMX文件格式解析  作者：crossous - ifwz1729 - 博客园</title>
+    <link rel="icon" id="favicon" href="https://assets.cnblogs.com/favicon_v3_2.ico" type="image/x-icon" />
+    <link rel="canonical" href="https://www.cnblogs.com/ifwz/p/17544729.html" />
+    
+    <link rel="stylesheet" href="/css/blog-common.min.css?v=upPkXvnd9QTNAQiQSnN_7dWPJzLeSWnCHOHEx3YTwbg" />
+    
+
+    
+        <link id="highlighter-theme-cnblogs" type="text/css" rel="stylesheet" href="/css/hljs/cnblogs.css?v=5J1NDtbnnIr2Rc2SdhEMlMxD4l9Eydj88B31E7_NhS4" />
+    <link type="text/css" rel="stylesheet" href="https://www.cnblogs.com/ifwz/custom.css?v=M8To7qEiClk5j8&#x2B;gr6sf&#x2B;xNi&#x2B;ok=" />
+    
+    <link id="mobile-style" media="only screen and (max-width: 767px)" type="text/css" rel="stylesheet" href="/css/mobile-common.min.css?v=a5tjm35tHR3Bq88JZf8V-jiXDhgs5wg823qWgRI6uRY" />
+    
+    <link type="application/rss+xml" rel="alternate" href="https://www.cnblogs.com/ifwz/rss" />
+    <link type="application/rsd+xml" rel="EditURI" href="https://www.cnblogs.com/ifwz/rsd.xml" />
+    <link type="application/wlwmanifest+xml" rel="wlwmanifest" href="https://www.cnblogs.com/ifwz/wlwmanifest.xml" />
+    
+    <script type="application/ld&#x2B;json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "@id": "https://www.cnblogs.com/ifwz/p/17544729.html",
+      "headline": "【MMD】PMX文件格式解析  作者：crossous",
+      "description": "![](https://upload-images.jianshu.io/upload_images/7875603-c23444ef52424dd4.png?imageMogr2/auto-orient/strip|imageView2/2/w/1200/format/webp) # 一、前言 P",
+      "image": [
+        
+      ],
+      "author": {
+        "@type": "Person",
+        "@id": "https://www.cnblogs.com/ifwz/",
+        "name": "ifwz1729",
+        "url": "https://www.cnblogs.com/ifwz/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://www.cnblogs.com/",
+        "name": "博客园",
+        "url": "https://www.cnblogs.com/"
+      },
+      "datePublished": "2023-07-11T15:10:00.0000000&#x2B;08:00",
+      "dateModified": "2023-07-11T15:10:00.0000000&#x2B;08:00",
+      "wordCount": "35519",
+      "isPartOf": {
+        "@type": "Blog",
+        "@id": "https://www.cnblogs.com/ifwz/",
+        "name": "ifwz&#x27;s blog",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://www.cnblogs.com/",
+          "name": "博客园"
+        }
+      }
+    }
+    </script>
+
+    <script>
+        var currentBlogId = 652444;
+        var currentBlogApp = 'ifwz';
+        var isLogined = false;
+        var isBlogOwner = false;
+        var skinName = 'Custom';
+        var visitorUserId = '';
+        window.hasCustomScript = true;
+        window.cb_enable_mathjax = true;
+        window.mathEngine = 1;
+        window.codeHighlightEngine = 1;
+        window.enableCodeLineNumber = false;
+        window.codeHighlightTheme = 'cnblogs';
+        window.darkModeCodeHighlightTheme = 'vs2015';
+        window.isDarkCodeHighlightTheme = false;
+        window.isDarkModeCodeHighlightThemeDark = true;
+        window.isDisableCodeHighlighter = false;
+        window.enableCodeThemeTypeFollowSystem = false;
+        window.enableMacStyleCodeBlock = false;
+
+    </script>
+        <script>
+            window.currentPostId = 17544729;
+            window.currentPostDateAdded = '2023-07-11 15:10';
+        </script>
+    <script src="https://assets.cnblogs.com/scripts/jquery-3.3.1.min.js"></script>
+    <script src="https://cdn-www.cnblogs.com/js/blog-common.min.js?v=I-aGCC6RPCITzm4amliVwxbk_ZpBOD_bUXZxJT21U3s"></script>
+        <script>updateCustomBlogReferrer();</script>
+    
+</head>
+<body class="skin-custom has-navbar mathjax3">
+    <a name="top"></a>
+        <div id="imagebar" class="imagebar-mobile imagebar-text-mobile formobile">
+                <a href="https://qoder.cnblogs.com/" onclick="countCreativeClicks('M2-Qoder')" rel="nofollow">
+                    <img src="https://img2024.cnblogs.com/blog/35695/202510/35695-20251025102907236-509444921.jpg" alt="" onload="countCreativeImpressionsOnMobile('M2-Qoder')" />
+                    <span id="m2_impression" style="display:none"></span>
+                </a>
+        </div>
+    <div id="top_nav" class="navbar forpc">
+        <nav id="nav_main" class="navbar-main">
+            <ul id="nav_left" class="navbar-list navbar-left">
+                <li class="navbar-branding">
+                    <a href="https://www.cnblogs.com/" title="开发者的网上家园" role="banner">
+                        <img src="//assets.cnblogs.com/logo.svg" alt="博客园logo" />
+                    </a>
+                </li>
+                <li><a href="https://cnblogs.vip/">会员</a></li>
+                <li><a href="https://www.cnblogs.com/cmt/p/18500368">众包</a></li>
+                <li><a href="https://news.cnblogs.com/" onclick="countClicks('nav', 'skin-navbar-news')">新闻</a></li>
+                <li><a href="https://q.cnblogs.com/" onclick="countClicks('nav', 'skin-navbar-q')">博问</a></li>
+                <li><a href="https://ing.cnblogs.com/" onclick="countClicks('nav', 'skin-navbar-ing')">闪存</a></li>
+                <li><a href="https://www.cnblogs.com/cmt/p/19081960">赞助商</a></li>
+                <li><a href="https://harmonyos.cnblogs.com/" onclick="countClicks('nav', 'blog-navbar-harmonyos')">HarmonyOS</a></li>
+                <li><a href="https://chat2db-ai.com/" target="_blank" onclick="countClicks('nav', 'skin-navbar-chat2db')">Chat2DB</a></li>
+            </ul>
+            <ul id="nav_right" class="navbar-list navbar-right">
+                <li>
+                    <form id="zzk_search" class="navbar-search dropdown" action="https://zzk.cnblogs.com/s" method="get" role="search">
+                        <input name="w" id="zzk_search_input" placeholder="代码改变世界" type="search" tabindex="3" autocomplete="off" />
+                        <button id="zzk_search_button" onclick="window.navbarSearchManager.triggerActiveOption()">
+                            <img id="search_icon" class="focus-hidden" src="//assets.cnblogs.com/icons/search.svg" alt="搜索" />
+                            <img class="hidden focus-visible" src="//assets.cnblogs.com/icons/enter.svg" alt="搜索" />
+                        </button>
+                        <ul id="navbar_search_options" class="dropdown-menu quick-search-menu">
+                            <li tabindex="0" class="active" onclick="zzkSearch(event, document.getElementById('zzk_search_input').value)">
+                                <div class="keyword-wrapper">
+                                    <img src="//assets.cnblogs.com/icons/search.svg" alt="搜索" />
+                                    <div class="keyword"></div>
+                                </div>
+                                <span class="search-area">所有博客</span>
+                            </li>
+                                    <li tabindex="1" onclick="zzkBlogSearch(event, 'ifwz', document.getElementById('zzk_search_input').value)">
+                                        <div class="keyword-wrapper">
+                                            <img src="//assets.cnblogs.com/icons/search.svg" alt="搜索" />
+                                            <div class="keyword"></div>
+                                        </div>
+                                        <span class="search-area">当前博客</span>
+                                    </li>
+                        </ul>
+                    </form>
+                </li>
+                <li id="navbar_login_status" class="navbar-list">
+                    <a class="navbar-user-info navbar-blog" href="https://i.cnblogs.com/EditPosts.aspx?opt=1" alt="写随笔" title="写随笔">
+                        <img id="new_post_icon" class="navbar-icon" src="//assets.cnblogs.com/icons/newpost.svg" alt="写随笔" />
+                    </a>
+                    <a id="navblog-myblog-icon" class="navbar-user-info navbar-blog" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx" alt="我的博客" title="我的博客">
+                        <img id="myblog_icon" class="navbar-icon" src="//assets.cnblogs.com/icons/myblog.svg" alt="我的博客" />
+                    </a>
+                    <a class="navbar-user-info navbar-message navbar-icon-wrapper" href="https://msg.cnblogs.com/" alt="短消息" title="短消息">
+                        <img id="msg_icon" class="navbar-icon" src="//assets.cnblogs.com/icons/message.svg" alt="短消息" />
+                        <span id="msg_count" style="display: none"></span>
+                    </a>
+                    <a id="navbar_lite_mode_indicator" data-current-page="blog" style="display: none" href="javascript:void(0)" alt="简洁模式" title="简洁模式启用，您在访问他人博客时会使用简洁款皮肤展示">
+                        <img class="navbar-icon" src="//assets.cnblogs.com/icons/lite-mode-on.svg" alt="简洁模式" />
+                    </a>
+                    <div id="user_info" class="navbar-user-info dropdown">
+                        <a class="dropdown-button" href="https://home.cnblogs.com/">
+                            <img id="user_icon" class="navbar-avatar" src="//assets.cnblogs.com/icons/avatar-default.svg" alt="用户头像" />
+                        </a>
+                        <div class="dropdown-menu">
+                            <a id="navblog-myblog-text" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx">我的博客</a>
+                            <a href="https://home.cnblogs.com/">我的园子</a>
+                            <a href="https://account.cnblogs.com/settings/account">账号设置</a>
+                            <a href="https://vip.cnblogs.com/my">会员中心</a>
+                            <a href="javascript:void(0)" id="navbar_lite_mode_toggle" title="简洁模式会使用简洁款皮肤显示所有博客">
+    简洁模式 <span id="navbar_lite_mode_spinner" class="hide">...</span>
+</a>
+
+                            <a href="javascript:void(0)" onclick="account.logout();">退出登录</a>
+                        </div>
+                    </div>
+                    <a class="navbar-anonymous" href="https://account.cnblogs.com/signup">注册</a>
+                    <a class="navbar-anonymous" href="javascript:void(0);" onclick="account.login()">登录</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <div id="page_begin_html">
+        <!-- rainbow rotate -->
+ <div id="loading">
+     <div class="spinner-box">
+         <div class="red w1 leo"></div>
+         <div class="orange w2 leo"></div>
+         <div class="yellow w3 leo"></div>
+         <div class="green w4 leo"></div>
+         <div class="cyan w5 leo"></div>
+         <div class="blue w6 leo"></div>
+         <div class="purple w7 leo"></div>
+     </div>
+ </div>
+
+    </div>
+
+    <div id="home">
+<div id="header">
+	<div id="blogTitle">
+        <a id="lnkBlogLogo" href="https://www.cnblogs.com/ifwz/"><img id="blogLogo" src="/skins/custom/images/logo.gif" alt="返回主页" /></a>		
+		
+
+<h1><a id="Header1_HeaderTitle" class="headermaintitle HeaderMainTitle" href="https://www.cnblogs.com/ifwz">ifwz's blog</a>
+</h1>
+<h2>穿梭在二次元与二进制的世界</h2>
+
+
+
+
+		
+	</div>
+	<div id="navigator">
+		
+<ul id="navList">
+<li><a id="blog_nav_sitehome" class="menu" href="https://www.cnblogs.com/">
+博客园</a>
+</li>
+<li>
+<a id="blog_nav_myhome" class="menu" href="https://www.cnblogs.com/ifwz/">
+首页</a>
+</li>
+<li>
+
+<a id="blog_nav_newpost" class="menu" href="https://i.cnblogs.com/EditPosts.aspx?opt=1">
+新随笔</a>
+</li>
+<li>
+<a id="blog_nav_contact" class="menu" href="https://msg.cnblogs.com/send/ifwz1729">
+联系</a></li>
+<li>
+<a id="blog_nav_rss" class="menu" href="javascript:void(0)" data-rss="https://www.cnblogs.com/ifwz/rss/">
+订阅</a>
+<!--<partial name="./Shared/_XmlLink.cshtml" model="Model" /></li>--></li>
+<li>
+<a id="blog_nav_admin" class="menu" href="https://i.cnblogs.com/">
+管理</a>
+</li>
+</ul>
+
+
+		<div class="blogStats">
+			<div id="blog_stats_place_holder"><script>loadBlogStats();</script></div>
+		</div>
+	</div>
+</div>
+<div id="main">
+	<div id="mainContent">
+	<div class="forFlow">
+		<div id="post_detail">
+    
+    <div id="topics">
+        <div class="post">
+            <h1 class = "postTitle">
+                <a id="cb_post_title_url" class="postTitle2 vertical-middle" href="https://www.cnblogs.com/ifwz/p/17544729.html" title="发布于 2023-07-11 15:09">
+    <span role="heading" aria-level="2">【MMD】PMX文件格式解析  作者：crossous</span>
+    
+
+</a>
+
+            </h1>
+            <div class="clear"></div>
+            <div class="postBody">
+                <div id="cnblogs_post_body" class="blogpost-body cnblogs-markdown">
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-c23444ef52424dd4.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1200/format/webp" alt="" loading="lazy"></p>
+<h1 id="一前言">一、前言</h1>
+<p>PMX是Polygon Model eXtended的简写，是动画软件MikuMikuDance中的模型文件，是.PMD格式（Polygon Model Data）的继承者。<br>
+  上次解析的是MMD中的动作文件<a href="https://www.jianshu.com/p/ae312fb53fc3" target="_blank" rel="noopener nofollow">VMD</a>，相比于VMD，模型文件需要了解的东西更多，为此我还简单学了下建模工具Blender。<br>
+  同样的，这次也有参考的网站。</p>
+<blockquote>
+<p>国外Github上，看样子是老外翻译日文到英语的文档<br>
+<a href="https://links.jianshu.com/go?to=https%3A%2F%2Fgist.github.com%2Ffelixjones%2Ff8a06bd48f9da9a4539f" target="_blank" rel="noopener nofollow">https://gist.github.com/felixjones/f8a06bd48f9da9a4539f</a><br>
+日文Wiki<br>
+<a href="https://links.jianshu.com/go?to=https%3A%2F%2Fwww6.atwiki.jp%2Fvpvpwiki%2Fpages%2F284.html" target="_blank" rel="noopener nofollow">https://www6.atwiki.jp/vpvpwiki/pages/284.html</a><br>
+参考PmxEditor说明<br>
+<a href="https://links.jianshu.com/go?to=http%3A%2F%2Fblog.sina.com.cn%2Fs%2Fblog_88673e9e0101g9g8.html" target="_blank" rel="noopener nofollow">【PE教学】超超超初心者向PE入门Part1 - 基本原理</a><br>
+<a href="https://links.jianshu.com/go?to=http%3A%2F%2Fdafeihua.lofter.com%2Fpost%2F1cac5219_51c2da5" target="_blank" rel="noopener nofollow">古剑二MMD&amp;绑骨教程</a><br>
+<a href="https://links.jianshu.com/go?to=https%3A%2F%2Fwww.bilibili.com%2Fvideo%2Fav15484765%2F" target="_blank" rel="noopener nofollow">mmd教程/pe教程-oeasy</a><br>
+VPVP:<a href="https://links.jianshu.com/go?to=https%3A%2F%2Fwww6.atwiki.jp%2Fvpvpwiki%2Fpages%2F118.html" target="_blank" rel="noopener nofollow">https://www6.atwiki.jp/vpvpwiki/pages/118.html</a></p>
+</blockquote>
+<p>借物表：</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MikuMikuDance十周年汉化版</td>
+</tr>
+<tr>
+<td>PmxEditor_0254e</td>
+</tr>
+<tr>
+<td>八重樱、q版樱火轮舞、女仆丽塔-洛丝薇瑟2.0-神帝宇改模</td>
+</tr>
+<tr>
+<td>MMD-ray渲染</td>
+</tr>
+</tbody>
+</table>
+<h3 id="使用工具">使用工具</h3>
+<p>相较之前用MMD演示动作数据构成，PMX文件的构成用PmxEditor研究更好，Pmx编辑窗口很好的把文件结构展示出来。</p>
+<hr>
+<h1 id="二pmx文件解析">二、PMX文件解析</h1>
+<h2 id="1类型说明">1.类型说明</h2>
+<p>相对于上次VMD的解析，PMX的类型更为复杂，用简单的C数据类型解释很麻烦，因此向国外的文档学习，将其中某些元素定义为一些类型。可以先大致看一眼。</p>
+<h4 id="1c类型">（1）C类型</h4>
+<p>C语言风格基础类型，复杂类型也是由许多基础类型定义。</p>
+<table>
+<thead>
+<tr>
+<th>类型名称</th>
+<th>C类型</th>
+<th>标准类型</th>
+<th>大小（字节）</th>
+<th>范围</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>byte</td>
+<td>char</td>
+<td>uint8_t</td>
+<td>1</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903488-1309660643.svg" alt="[-128, 127]" loading="lazy"></td>
+</tr>
+<tr>
+<td>ubyte</td>
+<td>unsigned char</td>
+<td>uint8_t</td>
+<td>1</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903560-1452255456.svg" alt="[0, 255]" loading="lazy"></td>
+</tr>
+<tr>
+<td>short</td>
+<td>short</td>
+<td>int16_t</td>
+<td>2</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903539-368989773.svg" alt="[-2^{15}, 2^{15}-1]" loading="lazy"></td>
+</tr>
+<tr>
+<td>ushort</td>
+<td>unsigned short</td>
+<td>uint16_t</td>
+<td>2</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903478-1778859569.svg" alt="[0, 2^{16}-1]" loading="lazy"></td>
+</tr>
+<tr>
+<td>int</td>
+<td>int</td>
+<td>int32_t</td>
+<td>4</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903521-588269698.svg" alt="[-2^{31}, 2^{31}-1]" loading="lazy"></td>
+</tr>
+<tr>
+<td>uint</td>
+<td>unsigned int</td>
+<td>uint32_t</td>
+<td>4</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903538-1005250798.svg" alt="[0, 2^{32}-1]" loading="lazy"></td>
+</tr>
+<tr>
+<td>float</td>
+<td>float</td>
+<td>float</td>
+<td>4</td>
+<td>IEEE754标准定义float范围</td>
+</tr>
+</tbody>
+</table>
+<h4 id="2pmx类型">（2）PMX类型</h4>
+<p>PMX格式所定义类型，不过这些类型在大多数图形库中都有定义</p>
+<table>
+<thead>
+<tr>
+<th>类型名称</th>
+<th>类型说明</th>
+<th>类型结构</th>
+<th>大小（字节）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vec2</td>
+<td>XY 向量</td>
+<td>float, float</td>
+<td>8</td>
+</tr>
+<tr>
+<td>vec3</td>
+<td>XYZ 向量</td>
+<td>float, float, float</td>
+<td>12</td>
+</tr>
+<tr>
+<td>vec4</td>
+<td>XYZW 向量</td>
+<td>float, float, float, float</td>
+<td>16</td>
+</tr>
+<tr>
+<td>text</td>
+<td>前四个字节说明字符串长度，编码定义在后面的Globas全局定义中</td>
+<td>int, byte[]</td>
+<td>4+字符长度</td>
+</tr>
+<tr>
+<td>flag</td>
+<td>标志类型，每个Byte可含有8个标志0为false，1为true</td>
+<td>byte</td>
+<td>1</td>
+</tr>
+<tr>
+<td>index</td>
+<td>索引类型，每个要素的索引不同，后面详细说明</td>
+<td>byte/ubyte/short/ushort/int</td>
+<td>1/2/4</td>
+</tr>
+</tbody>
+</table>
+<h4 id="3索引类型">（3）索引类型</h4>
+<p>有时候我们需要记住元素的索引，例如某个面是由哪几个点组成的，而表示一个点，就需要索引。<br>
+  索引的大小不是确定的，有些元素需要很多索引，因此索引类型也很大；而有些元素很少，索引节点的大小很小。<br>
+  同样的元素，例如顶点，有时一个模型只有几个顶点，有的有几万个顶点，因此同样是节点的索引，大小也可能不一样。PMX将索引类型分为3种：Type1、Type2、Type4，分别占有1、2、4个字节，模型的索引的大小储存在Globas全局定义中，后面会提到。</p>
+<table>
+<thead>
+<tr>
+<th>类型名称</th>
+<th>说明</th>
+<th>类型1</th>
+<th>类型2</th>
+<th>类型4</th>
+<th>类型1最大值</th>
+<th>类型2最大值</th>
+<th>类型4最大值</th>
+<th>空值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vertex</td>
+<td>顶点</td>
+<td>ubyte</td>
+<td>ushort</td>
+<td>int</td>
+<td>255</td>
+<td>65535</td>
+<td>2147483647</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Bone</td>
+<td>骨骼</td>
+<td>byte</td>
+<td>short</td>
+<td>int</td>
+<td>127</td>
+<td>32767</td>
+<td>2147483647</td>
+<td>-1</td>
+</tr>
+<tr>
+<td>Texture</td>
+<td>纹理</td>
+<td>byte</td>
+<td>short</td>
+<td>int</td>
+<td>127</td>
+<td>32767</td>
+<td>2147483647</td>
+<td>-1</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>材质</td>
+<td>byte</td>
+<td>short</td>
+<td>int</td>
+<td>127</td>
+<td>32767</td>
+<td>2147483647</td>
+<td>-1</td>
+</tr>
+<tr>
+<td>Morph</td>
+<td>变形（表情）</td>
+<td>byte</td>
+<td>short</td>
+<td>int</td>
+<td>127</td>
+<td>32767</td>
+<td>2147483647</td>
+<td>-1</td>
+</tr>
+<tr>
+<td>Rigidbody</td>
+<td>刚体</td>
+<td>byte</td>
+<td>short</td>
+<td>int</td>
+<td>127</td>
+<td>32767</td>
+<td>2147483647</td>
+<td>-1</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2文件总体结构概览">2.文件总体结构概览</h2>
+<p>和VMD文件类似，都是全局信息-[元素总数-元素信息]。</p>
+<table>
+<thead>
+<tr>
+<th>Header</th>
+<th></th>
+<th>版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model information</td>
+<td>Globals</td>
+<td>2.0</td>
+<td>模型全局信息</td>
+</tr>
+<tr>
+<td>Vertex count</td>
+<td>Vertices</td>
+<td>2.0</td>
+<td>顶点</td>
+</tr>
+<tr>
+<td>Surface count</td>
+<td>Surfaces</td>
+<td>2.0</td>
+<td>面</td>
+</tr>
+<tr>
+<td>Texture count</td>
+<td>Textures</td>
+<td>2.0</td>
+<td>纹理</td>
+</tr>
+<tr>
+<td>Material count</td>
+<td>Materials</td>
+<td>2.0</td>
+<td>材质</td>
+</tr>
+<tr>
+<td>Bone count</td>
+<td>Bones</td>
+<td>2.0</td>
+<td>骨骼</td>
+</tr>
+<tr>
+<td>Morph count</td>
+<td>Morphs</td>
+<td>2.0</td>
+<td>变形（表情）</td>
+</tr>
+<tr>
+<td>Displayframe count</td>
+<td>Displayframes</td>
+<td>2.0</td>
+<td>表示枠（huà）</td>
+</tr>
+<tr>
+<td>Rigidbody count</td>
+<td>Rigidbodies</td>
+<td>2.0</td>
+<td>刚体</td>
+</tr>
+<tr>
+<td>Joint count</td>
+<td>Joints</td>
+<td>2.0</td>
+<td>关节点</td>
+</tr>
+<tr>
+<td>SoftBody count</td>
+<td>SoftBodies</td>
+<td>2.0</td>
+<td>软体</td>
+</tr>
+</tbody>
+</table>
+<p>软体应该是作为Pmx独有的，很明显的，PmdEditor没有软体按钮。<br>
+  下面是真正开始解析文件每一部分格式。</p>
+<hr>
+<h2 id="3头部全局信息">3.头部、全局信息</h2>
+<h4 id="header">Header</h4>
+<hr>
+<p>模型头部，描述模型的基本信息</p>
+<table>
+<thead>
+<tr>
+<th>数据含义</th>
+<th>结构</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>签名</td>
+<td>byte[4]</td>
+<td>"PMX " [0x50, 0x4D, 0x58, 0x20]</td>
+<td>值为"PMX空格"</td>
+</tr>
+<tr>
+<td>版本号</td>
+<td>float</td>
+<td>2.0、2.1</td>
+<td></td>
+</tr>
+<tr>
+<td>全局信息数量</td>
+<td>byte</td>
+<td>8（PMX2.0）</td>
+<td>PMX2.0有8条全局信息</td>
+</tr>
+<tr>
+<td>全局信息</td>
+<td>byte[ <strong>全局信息数量</strong> ]</td>
+<td>用于描述各索引的数量</td>
+<td><strong>见后面的全局信息说明表</strong></td>
+</tr>
+<tr>
+<td>本地模型名</td>
+<td>text</td>
+<td></td>
+<td>本地语言模型名，例如中文、日文</td>
+</tr>
+<tr>
+<td>通用模型名</td>
+<td>text</td>
+<td></td>
+<td>英文名</td>
+</tr>
+<tr>
+<td>本地语言模型描述</td>
+<td>text</td>
+<td></td>
+<td>打开MMD弹出的注意事项，本地语言</td>
+</tr>
+<tr>
+<td>通用语言模型描述</td>
+<td>text</td>
+<td></td>
+<td>英文注意事项</td>
+</tr>
+</tbody>
+</table>
+<h4 id="全局信息">全局信息</h4>
+<hr>
+<p>用于描述索引类型的类型，就是上面索引类型的[1, 2, 4]</p>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>含义</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>字符串编码</td>
+<td 0,="" 1=""></td>
+<td>0为UTF16LE编码， 1为UTF8编码</td>
+</tr>
+<tr>
+<td>1</td>
+<td>额外的vec4数量</td>
+<td 0,="" 1,="" 2,="" 3,="" 4=""></td>
+<td>在这里可以定义为每个顶点增加vec4的数量，详见后面的顶点说明</td>
+</tr>
+<tr>
+<td>2</td>
+<td>顶点索引大小</td>
+<td 1,="" 2,="" 4=""></td>
+<td>这个大小用于表示索引类型的类型</td>
+</tr>
+<tr>
+<td>3</td>
+<td>纹理索引大小</td>
+<td 1,="" 2,="" 4=""></td>
+<td>也可以理解为所占的字节有多少</td>
+</tr>
+<tr>
+<td>4</td>
+<td>材质索引大小</td>
+<td 1,="" 2,="" 4=""></td>
+<td>间接能知道模型的该元素数量大致为多少</td>
+</tr>
+<tr>
+<td>5</td>
+<td>骨骼索引大小</td>
+<td 1,="" 2,="" 4=""></td>
+<td></td>
+</tr>
+<tr>
+<td>6</td>
+<td>变形索引大小</td>
+<td 1,="" 2,="" 4=""></td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td>刚体索引大小</td>
+<td 1,="" 2,="" 4=""></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4顶点">4.顶点</h2>
+<p>首先我们打开PmxEditor并读入一个模型，然后进入编辑器的顶点页面。因为顶点有复杂的数据，这次同样先说明一些其他的东西。如果感觉迷惑了不要紧，对照着顶点页面研究就能很好的明白各处的含义。</p>
+<hr>
+<h4 id="额外的vec4">额外的vec4</h4>
+<p>方才在全局定义中，有一个额外的vec4选项，定义为每个顶点多出几个vec4，每个顶点可以最多获得4个额外的vec4值，文件文身也不知道这是什么含义，多数情况会直接传递给vertex shader决定使用情况。 <strong>例如</strong> ，vec4用于以下方面：</p>
+<ul>
+<li>
+<p><strong>额外的纹理UV</strong></p>
+</li>
+<li>
+<p><strong>高光贴图UV</strong><br>
+详细参考<a href="https://links.jianshu.com/go?to=https%3A%2F%2Flearnopengl-cn.github.io%2F02%2520Lighting%2F04%2520Lighting%2520maps%2F" target="_blank" rel="noopener nofollow">这个</a>教程</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-318aa5e808521072.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/499/format/webp" alt="" loading="lazy"></p>
+<p>右侧的贴图就是左侧的高光贴图，因为黑色部分的RGB值为0，不会参与高光的计算（参与了但值为0），而金属边框会参与计算，做出的结果是：木头部分不会反射高光，而金属部分会出现高光</p>
+</li>
+<li>
+<p><strong>法线贴图UV</strong><br>
+  通过改变法向量，使得平面图计算出阴暗交替的感觉。</p>
+</li>
+<li>
+<p><strong>顶点颜色（PMX2.1拓展）</strong></p>
+</li>
+</ul>
+<p>忽略这些额外的vec4是最安全的，但同时也会导致很多东西无法显示。</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-7cac626605f0d4ff.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/645/format/webp" alt="" loading="lazy"></p>
+<p>这里就是追加UV选项的地方</p>
+<hr>
+<h4 id="顶点绑骨">顶点绑骨</h4>
+<p>顶点要随着骨骼运动、变形，每个骨骼对顶点有相应的权重，在MMD中，一个顶点最多和4个骨骼相关联；随着绑定骨骼数量的不同，顶点绑骨的类型也不同。以下是绑骨类型：</p>
+<h6 id="无绑骨">无绑骨</h6>
+<p>骨骼索引-1是零值，骨骼应该被忽略。</p>
+<h6 id="bdef-1bone-deform20">BDEF 1（Bone Deform）（2.0）</h6>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼1</td>
+<td>权重==1</td>
+</tr>
+</tbody>
+</table>
+<p>注意：索引类型（index）对每个元素不同，骨骼索引的定义看上面的索引类型说明。</p>
+<h6 id="bdef-220">BDEF 2（2.0）</h6>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼1</td>
+<td></td>
+</tr>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼2</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼1权重</td>
+<td>骨骼2权重 = 1-骨骼1权重</td>
+</tr>
+</tbody>
+</table>
+<h6 id="bdef-420">BDEF 4（2.0）</h6>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼1</td>
+<td></td>
+</tr>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼2</td>
+<td></td>
+</tr>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼3</td>
+<td></td>
+</tr>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼4</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼1权重</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼2权重</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼3权重</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼4权重</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903522-229038250.svg" alt="\sum_{i=1}^4Bone_i" loading="lazy">不保证=1</td>
+</tr>
+</tbody>
+</table>
+<h6 id="sdef20">SDEF（2.0）</h6>
+<p>一种SBS（Spherical Blend Skinning）球面混合蒙皮方式，能使皮肤的扭动更自然。</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼1</td>
+<td></td>
+</tr>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼2</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼1权重</td>
+<td>骨骼2权重 = 1-骨骼1权重</td>
+</tr>
+<tr>
+<td>vec3</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903569-1806828057.svg" alt="C" loading="lazy"></td>
+<td></td>
+</tr>
+<tr>
+<td>vec3</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903477-1525213147.svg" alt="R_0" loading="lazy"></td>
+<td></td>
+</tr>
+<tr>
+<td>vec3</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903561-272254888.svg" alt="R_1" loading="lazy"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h6 id="qdef21">QDEF（2.1）</h6>
+<p>双四元数变型混合</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼1</td>
+<td></td>
+</tr>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼2</td>
+<td></td>
+</tr>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼3</td>
+<td></td>
+</tr>
+<tr>
+<td>索引-骨骼</td>
+<td>骨骼4</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼1权重</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼2权重</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼3权重</td>
+<td></td>
+</tr>
+<tr>
+<td>foat</td>
+<td>骨骼4权重</td>
+<td><img src="https://img2023.cnblogs.com/blog/1699669/202307/1699669-20230711150903522-229038250.svg" alt="\sum_{i=1}^4Bone_i" loading="lazy">不保证=1</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="顶点数据">顶点数据</h4>
+<p>顶点部分以一个int开始，定义了有多少个顶点（注意它是一个带符号的int），后面跟着每个顶点的定义<br>
+每个顶点的格式如下：</p>
+<table>
+<thead>
+<tr>
+<th>含义</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>位置</td>
+<td>vec3</td>
+<td>XYZ</td>
+</tr>
+<tr>
+<td>法向量</td>
+<td>vec3</td>
+<td>XYZ</td>
+</tr>
+<tr>
+<td>UV坐标</td>
+<td>vec2</td>
+<td>XY</td>
+</tr>
+<tr>
+<td>额外的vec4</td>
+<td>vec4[N]</td>
+<td>N的大小见上面的全局定义</td>
+</tr>
+<tr>
+<td>变型权重类型</td>
+<td>byte</td>
+<td>0=BDEF1, 1=BDEF2, 2=BDEF4, 3=SDEF, 4=QDEF</td>
+</tr>
+<tr>
+<td>变型权重</td>
+<td>顶点绑骨类型</td>
+<td>见上面的顶点绑骨结构</td>
+</tr>
+<tr>
+<td>边缘放大率</td>
+<td>float</td>
+<td>[0, 1]</td>
+</tr>
+</tbody>
+</table>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-6abd7555e49006bf.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/648/format/webp" alt="" loading="lazy"></p>
+<hr>
+<h2 id="5面">5.面</h2>
+<p>面以三个顶点为一组，定义单个三角形面；三角形面向按顺时针缠绕顺序定义，顺时针为正面，逆时针为背面（与DirectX一样）。<br>
+  同样别忘了先读取一个int来确定有多少个面，不过要注意，面的定义是按照索引数量定义的，因此要将这个数字整除3。</p>
+<table>
+<thead>
+<tr>
+<th>含义</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>索引-顶点数组</td>
+<td>index-vertex[3]</td>
+<td>参考上面定义的索引类型</td>
+</tr>
+</tbody>
+</table>
+<h6 id="附加面类型pmx21">附加面类型（PMX2.1）</h6>
+<p>材质数据在2.1版本有扩充，能包含点和线的绘制，详细需要查阅资料。</p>
+<hr>
+<h2 id="6纹理">6.纹理</h2>
+<p>此处是纹理路径表，路径本身是字符串，它的格式和操作系统相关，可能是绝对路径也可能是相对路径。<br>
+  某些实现程序会基于文件名修改纹理，例如使用"_s"作为球体贴图或使用"_n"作为法线贴图。<br>
+  纹理贴图没有首选格式，最常见个纹理格式可能是bmp、png、tga，有时候也可能是jpg或dds格式。</p>
+<h6 id="保留的纹理名称">保留的纹理名称</h6>
+<p>纹理名称toon01.bmp"到"toon10.bmp"是保留的，模型不应该通过纹理数据引用这些纹理。如果不巧使用了，会发生什么取决于实现程序，某些实现将忽略这些，某些实现会使用内部的纹理。<br>
+  同样，纹理数据以一个int开头，定义总共有多少纹理。</p>
+<table>
+<thead>
+<tr>
+<th>含义</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>路径</td>
+<td>text</td>
+<td>纹理路径通常是相对的</td>
+</tr>
+</tbody>
+</table>
+<p>PmxEditor编辑没有独立的纹理页面，但在材质页面能看到材质引用的纹理。</p>
+<hr>
+<h2 id="7材质">7.材质</h2>
+<p>PMX用基于材质的渲染，而不是基于物理的渲染，<br>
+鉴于后面的材质数据会使用标志位，先放出材质的标志类型定义（1byte=8flag）：</p>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>含义</th>
+<th>效果</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>no-cull 禁用背面剔除</td>
+<td>双面描绘</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Ground shadow 地面阴影</td>
+<td>将阴影投射到几何体上</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Draw shadow 描绘阴影</td>
+<td>渲染到阴影贴图（本影标示）</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Receive shadow 受到阴影渲染</td>
+<td>从阴影贴图接受阴影（本影）</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Has edge 有边缘</td>
+<td>有边缘描绘（轮廓线有效）</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Vertex colour 顶点颜色</td>
+<td>使用额外的vec4作为顶点的颜色</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Point drawing 画点</td>
+<td>三个顶点都被画出</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Line drawing 画线</td>
+<td>三个边被画出</td>
+<td>2.1</td>
+</tr>
+</tbody>
+</table>
+<h6 id="点线绘图pmx21">点线绘图（PMX2.1）</h6>
+<p>如果绘点和绘线标志同时存在，绘点标志将覆盖绘线标志。</p>
+<ul>
+<li>普通面通过顶点 [A -&gt; B -&gt; C]渲染</li>
+<li>通过点绘制，每个顶点被渲染为单独的点[A，B，C]，从而产生3个点。</li>
+<li>线条图将呈现3条线[A-&gt; B，B-&gt; C，C-&gt; A]，产生3条线。</li>
+</ul>
+<p>启用点渲染时，材质（不是顶点）的边尺度值将控制点的大小。<br>
+  如果设置了边缘标志，则点或线将具有边缘，这是未定义的行为。</p>
+<h4 id="材质数据">材质数据</h4>
+<p>与之前相同，材质也有一个int记录材质的数量，材质的数据结构定义如下：</p>
+<table>
+<thead>
+<tr>
+<th>含义</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>本地材质名称</td>
+<td>text</td>
+<td>本地的材质名称，日语、中文等等</td>
+</tr>
+<tr>
+<td>通用材质名称</td>
+<td>text</td>
+<td>通用的材质名称，一般是英文</td>
+</tr>
+<tr>
+<td>漫反射颜色Diffuse</td>
+<td>vec4</td>
+<td>RGBA</td>
+</tr>
+<tr>
+<td>镜面光（高光）颜色Specular</td>
+<td>vec3</td>
+<td>RGB</td>
+</tr>
+<tr>
+<td>镜面光强度Specular strength</td>
+<td>float</td>
+<td>镜面高光的大小</td>
+</tr>
+<tr>
+<td>环境色ambient</td>
+<td>vec3</td>
+<td>当光线不足时的阴影色（既基础色，让阴影不那么黑）</td>
+</tr>
+<tr>
+<td>绘制标记</td>
+<td>flag</td>
+<td>见上面的材质标志</td>
+</tr>
+<tr>
+<td>边缘颜色</td>
+<td>vec4</td>
+<td>RGBA</td>
+</tr>
+<tr>
+<td>边缘比例</td>
+<td>float</td>
+<td>[0, 1]</td>
+</tr>
+<tr>
+<td>索引-纹理</td>
+<td>index-texture</td>
+<td>参考索引类型</td>
+</tr>
+<tr>
+<td>环境（高光贴图）索引</td>
+<td>index-texture</td>
+<td>与纹理索引相同，但用于环境映射</td>
+</tr>
+<tr>
+<td>环境（高光贴图）混合模式</td>
+<td>byte</td>
+<td>0=禁用, 1=乘, 2=加, 3=额外的vec4[注1]</td>
+</tr>
+<tr>
+<td>贴图引用</td>
+<td>byte</td>
+<td>0=引用纹理, 1=内部引用</td>
+</tr>
+<tr>
+<td>贴图值</td>
+<td>索引-纹理/byte</td>
+<td>取决于贴图引用[注2]</td>
+</tr>
+<tr>
+<td>元数据</td>
+<td>text</td>
+<td>用于脚本或其他数据</td>
+</tr>
+<tr>
+<td>面数量</td>
+<td>int</td>
+<td>表示当前材质影响了多少个面[注3]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>注1：</strong> 环境混合模式3将使用第一个额外的vec4来映射环境纹理，仅使用X和Y值作为纹理UV。它被映射为附加纹理图层。这可能与第一个额外vec4的其他用途冲突。<br>
+<strong>注2：</strong> Toon值将是一个非常类似于标准纹理和环境纹理索引的纹理索引，除非Toon引用字节等于1，在这种情况下，Toon值将是一个引用一组10个内部toon纹理的字节（大多数实现将使用“toon01.bmp”到“toon10.bmp”作为内部纹理，请参阅上面纹理的保留名称。<br>
+<strong>注3：</strong> 表面计数总是3的倍数。它基于先前材质的偏移量与当前材质的尺寸。如果将所有材质的所有表面计数相加，则应最终得到表面总数。<br>
+<strong>人话3</strong> ：图上的“脸红”为第一个材质，有81个面，[0, 81)面都属于本材质，而“首”由38个面组成，索引[81, 81+38]都属于“首”材质，以此类推，这样将材质、纹理、面组成的网格，组成面的顶点都结合起来了。</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-b6d1ac8b181eb085.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/647/format/webp" alt="" loading="lazy"></p>
+<p>环境色中，扩散色其实是diffuse漫反射，而反射色是specular高光反射色，反射强度是指光泽（Shininess），反射光强度是根据出射光与人眼矢量夹角的cos值确定的（处于0到1之间），shininess会将得到的数字再进行平方选择，得到的值为specular<sup>{(2</sup>)}，比如shininess为5，则要进行32次的pow。<br>
+  因此反射强度越小，光泽就越大。不过在MME自发光特效中，反射强度大概是不光代表光泽，同时代表光强，往往模型的反射强度值会设为120左右，这样物体的光泽很小，但光强特别大，看起来很闪耀。</p>
+<hr>
+<h2 id="8骨骼">8.骨骼</h2>
+<p>用于骨骼动画。</p>
+<h4 id="骨骼标志">骨骼标志</h4>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>含义</th>
+<th>效果</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>骨骼尾部(尖端)位置</td>
+<td>0为连接相对位置，1为连接子骨骼</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>可旋转</td>
+<td>启用旋转</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>可移动</td>
+<td>启用移动</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>3</td>
+<td>可见</td>
+<td>显示</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>4</td>
+<td>启用</td>
+<td>操作</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>5</td>
+<td>IK</td>
+<td>是IK骨</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>8</td>
+<td>付予旋转</td>
+<td>继承亲骨的旋转</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>9</td>
+<td>付予移动</td>
+<td>继承亲骨的移动</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>10</td>
+<td>固定轴</td>
+<td>轴限制</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>11</td>
+<td>本地轴</td>
+<td>Local轴</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>12</td>
+<td>后算物理</td>
+<td>先变形</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>13</td>
+<td>外部亲骨骼变形</td>
+<td>外部亲</td>
+<td>2.0</td>
+</tr>
+</tbody>
+</table>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-9cfe65c6678df9bf.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/644/format/webp" alt="" loading="lazy"></p>
+<p>变形阶层在<a href="https://links.jianshu.com/go?to=https%3A%2F%2Flearnmmd.com%2Fhttp%3A%2Flearnmmd.com%2Fdiscussion-bone-deformation-hierarchy%2F" target="_blank" rel="noopener nofollow">这里</a>有讨论，大致意思是：变形阶层的作用是物理的计算顺序，值越大越靠后计算，一般IK骨的值才是1，其他是0，而原文提到TDA式MIKU的眼睛是2，用于特殊的需求，具体可参照原文。<br>
+  （继承）付予旋转和移动的原意好像不单单是继承旋转和移动的作用，毕竟没有IK的骨骼都会跟着亲骨走，我发现有付予旋转的骨骼多是隐藏骨骼，而作用大概是可以增加或减少亲骨对当前骨骼的影响，应用可以看这里： <a href="https://links.jianshu.com/go?to=http%3A%2F%2Fdafeihua.lofter.com%2Fpost%2F1cac5219_cad0083" target="_blank" rel="noopener nofollow">【MMD教程相关】不追加捩骨的情况下解决模型手肘旋转时的扭曲</a>。</p>
+<h4 id="骨骼继承">骨骼继承</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>亲骨索引</td>
+<td>索引-骨骼</td>
+<td>参阅骨骼索引类型</td>
+</tr>
+<tr>
+<td>影响权重</td>
+<td>float</td>
+<td>亲骨的影响力</td>
+</tr>
+</tbody>
+</table>
+<p>假如上图的付予栏位中的旋转、移动有一个被选中，这个类型有效</p>
+<h4 id="骨骼固定轴">骨骼固定轴</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>轴方向</td>
+<td>vec3</td>
+<td>骨骼指向的方向</td>
+</tr>
+</tbody>
+</table>
+<p>这个用在手臂中那个圆形打着叉的捩(liè)骨中：</p>
+<p><img src="" alt="" loading="lazy"></p>
+<h4 id="骨骼local坐标">骨骼Local坐标</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X矢量</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>Z矢量</td>
+<td>vec3</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>PmxEditor最下面的local轴选项，这个见于左腕、右腕（左右胳膊）、以及往下延伸的子骨骼中，其他用法可以看看<a href="https://links.jianshu.com/go?to=http%3A%2F%2Ftieba.baidu.com%2Fp%2F5262921628%3Fpid%3D110319608446%26cid%3D0%23110319608446" target="_blank" rel="noopener nofollow">这个</a>。<br>
+  MMD左下角有操作手柄：</p>
+<p><img src="" alt="" loading="lazy"></p>
+<p>GLOBAL是可以点击的，会变成LOCAL。<br>
+  默认情况（模型选项Local轴无效），LOCAL轴依旧可以使用，不旋转模型的情况下，两个坐标没有区别，如果将模型旋转，GLOBAL轴会根据世界坐标旋转，而LOCAL轴会根据模型坐标旋转。<br>
+  当Local轴选项有效时，GLOBAL模式没有改变，而LOCAL的坐标会根据骨骼自身坐标系进行旋转：</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-1f2a5f8a5612cdbe.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/518/format/webp" alt="" loading="lazy"></p>
+<p>Global,Local无效,Local有效</p>
+<p>这个骨骼坐标系的定义就是由三个基向量（上图左3）确定。<br>
+  这个设定不会改变骨骼动画的行为；解释一下，我们现在已知坐标系有三种： <strong>世界坐标系、模型坐标系、骨骼坐标系</strong> ，为了区分，如上图绕世界坐标系Y轴旋转一个角度做对比。<br>
+  如果我们用Global手柄轴做旋转，永远是在世界坐标系下旋转，此时你拖动X轴手柄，会发现XYZ轴一起被改变。<br>
+  如果用Local轴旋转，需要看骨骼本身是否有骨骼坐标系（既上边的Local轴选项是否有效），如果像手臂等有效骨骼，旋转Local一样会发生XYZ轴同时改变，但如果无效，就不会发生，可以确定，这个轴旋转是依照模型坐标系来确定的。<br>
+  Local轴只会影响用户对模型的部分旋转操作，而动作数据记录的是模型坐标系，因此这里只会影响用户的操作，即使这里随意设定，也不会影响动画的展示。<br>
+  通常情况下，LocalX轴会设定为 <strong>normalize</strong> ( <strong>childBone</strong> - <strong>parentBone</strong> )（和上图不同）， <strong>LocalZ=cross(LocalX, [0, 0, 1])</strong> ， <strong>LocalY=cross(LocalZ, LocalX)</strong> ，这个可以去试试，和相机旋转的计算方式很像。</p>
+<h4 id="外亲骨">外亲骨</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>骨骼索引</td>
+<td>索引-骨骼</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>MMD即时绑定两个模型，为什么会出现在模型文件中，真是个迷。</p>
+<h4 id="ik-角度限制">IK 角度限制</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>下限</td>
+<td>vec3</td>
+<td>最小角度(弧度制)</td>
+</tr>
+<tr>
+<td>上限</td>
+<td>vec3</td>
+<td>最大角度(弧度制)</td>
+</tr>
+</tbody>
+</table>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-19cdd169daab090b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/224/format/webp" alt="" loading="lazy"></p>
+<h4 id="ik链">IK链</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>骨骼索引</td>
+<td>索引-骨骼</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>角度限制</td>
+<td>byte</td>
+<td>值为1时，使用角度限制</td>
+</tr>
+<tr>
+<td>IK 角度限制</td>
+<td>~</td>
+<td>如果角度限制值为1，那么此处参照上面的IK 角度限制</td>
+</tr>
+</tbody>
+</table>
+<p><strong>~</strong> 是参考其他类型，也可能没有的意思。</p>
+<h4 id="ik骨">IK骨</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>目标骨骼索引</td>
+<td>索引-骨骼</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>循环计数</td>
+<td>int</td>
+<td>IK解算 CCD（循环坐标下降法）循环次数</td>
+</tr>
+<tr>
+<td>限制角度</td>
+<td>float</td>
+<td>IK骨旋转角度限制</td>
+</tr>
+<tr>
+<td>IK链计数</td>
+<td>int</td>
+<td>IK链接的骨骼数量</td>
+</tr>
+<tr>
+<td>IK链接</td>
+<td>IK链[N]</td>
+<td>N是链接数，可以为0，类型参阅上面的IK链类型</td>
+</tr>
+</tbody>
+</table>
+<p>这里IK骨的数据看起来很迷</p>
+<p><img src="" alt="" loading="lazy"></p>
+<p><img src="" alt="" loading="lazy"></p>
+<p>IK是反向动力学骨骼，可以根据骨骼自身状态，反向影响亲骨，而非其他骨骼那样由亲骨带动子骨。<br>
+  图中可见到足IK有三处连接，分别非亲骨+IK链的上方，指向相对位置的左方，以及作为IK目标且不可见的右足先IK连接在右下方。<br>
+  原文中没有给出单位角和loop的作用，我在谷歌查了下：<a href="https://links.jianshu.com/go?to=https%3A%2F%2Flearnmmd.com%2Fhttp%3A%2Flearnmmd.com%2Fbetter-mmd-followcam%2F" target="_blank" rel="noopener nofollow">这里</a>，文章表示，Loop和模型本身无关，而是MMD内部计算某个最佳方案的算法有关，如果为0可能导致IK不会工作，因此很多模型都直接给个40作为值，角度也是这样，并且如果不给单位角值，它会自动生成一个能适应性良好的值。<br>
+（更新：IK解算用了循环坐标下降法，Loop是指循环次数，而角度限制是应对特殊的关节，如膝盖只让模型坐标系下的X轴旋转，并且关节角度不得大于180度，相对来说头发如果有IK，限制会小很多）<br>
+  上图的那个单位角114.5916，在文件中存储是2.0，也就是弧度制：。</p>
+<h4 id="骨骼数据">骨骼数据</h4>
+<p>骨骼数据以有符号int开头，定义了有多少个骨骼</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>骨骼本地名称</td>
+<td>text</td>
+<td>通常是日语</td>
+</tr>
+<tr>
+<td>骨骼通用名称</td>
+<td>text</td>
+<td>一般是英文</td>
+</tr>
+<tr>
+<td>位置</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>亲骨索引</td>
+<td>索引-骨骼</td>
+<td>特殊的：操作中心的亲骨为-1</td>
+</tr>
+<tr>
+<td>变形阶层</td>
+<td>int</td>
+<td>计算物理的顺序</td>
+</tr>
+<tr>
+<td>标志</td>
+<td>flag[2]</td>
+<td>见Bone标志</td>
+</tr>
+<tr>
+<td>尾部位置</td>
+<td>vec3/索引-骨骼</td>
+<td>见上面的材质标志</td>
+</tr>
+<tr>
+<td>骨骼继承</td>
+<td>~</td>
+<td>如果Flag中此处为True，就参阅上面的骨骼继承</td>
+</tr>
+<tr>
+<td>固定轴</td>
+<td>~</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>Local轴</td>
+<td>~</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>外部亲</td>
+<td>~</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>IK</td>
+<td>~</td>
+<td>同上</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="9变形">9.变形</h2>
+<p>变形就是我们常说的表情</p>
+<h4 id="变型类型">变型类型</h4>
+<p>标识变形的类型，长度只有1byte。<br>
+  对于使用者，常认为变型有三种或五种等等，从文件存储来说似乎不止这些：</p>
+<table>
+<thead>
+<tr>
+<th>变型模式</th>
+<th>值</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>组合</td>
+<td>0</td>
+<td>Group</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>顶点</td>
+<td>1</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>骨骼</td>
+<td>2</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>UV</td>
+<td>3</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>额外UV1</td>
+<td>4</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>额外UV2</td>
+<td>5</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>额外UV3</td>
+<td>6</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>额外UV4</td>
+<td>7</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>材质</td>
+<td>8</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>切换</td>
+<td>9</td>
+<td>Flip</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>脉冲</td>
+<td>10</td>
+<td></td>
+<td>2.1</td>
+</tr>
+</tbody>
+</table>
+<h4 id="偏移与偏移值">偏移与偏移值</h4>
+<p>变形对每一个持有的作用元素(顶点、骨骼、UV这些)称为偏移（Offset），我感觉不是十分准确，不过PmxEditor都是这么翻译的，那就入乡随俗了。<br>
+  针对不同的作用元素，会拥有不用的偏移值（偏移量）：</p>
+<h5 id="组合group">组合（Group）</h5>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>变形索引</td>
+<td>索引-变形</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>影响</td>
+<td>float</td>
+<td>对被索引变形的权重</td>
+</tr>
+</tbody>
+</table>
+<p>PmxEditor中操作方法是：右键表情-&gt;归纳到表情组合，或者直接右键-&gt;新建制作表情-&gt;组合(G)</p>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-ad19e9797a174e61.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/644/format/webp" alt="" loading="lazy"></p>
+<h5 id="顶点vertex">顶点（Vertex）</h5>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>顶点索引</td>
+<td>索引-顶点</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>移动</td>
+<td>vec3</td>
+<td>变化的相对位置</td>
+</tr>
+</tbody>
+</table>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-cb4af0cbe449e96a.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/235/format/webp" alt="" loading="lazy"></p>
+<h5 id="骨骼bone">骨骼（Bone）</h5>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>骨骼索引</td>
+<td>索引-骨骼</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>移动</td>
+<td>vec3</td>
+<td>变化的相对位置</td>
+</tr>
+<tr>
+<td>移动</td>
+<td>vec4</td>
+<td>相对旋转四元数</td>
+</tr>
+</tbody>
+</table>
+<p><img src="https://upload-images.jianshu.io/upload_images/7875603-0f9376cee4e948bb.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/237/format/webp" alt="" loading="lazy"></p>
+<h5 id="uv及拓展uv">UV（及拓展UV）</h5>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>顶点索引</td>
+<td>索引-顶点</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>~</td>
+<td>vec4</td>
+<td>做什么取决于UV拓展</td>
+</tr>
+</tbody>
+</table>
+<p>没太读明白，UV的值需要4个，我用的时候只有两个：</p>
+<p><img src="" alt="" loading="lazy"></p>
+<h5 id="材质material">材质（Material）</h5>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>材质索引</td>
+<td>索引-材质</td>
+<td>参阅索引类型，-1代表所有材质</td>
+</tr>
+<tr>
+<td>混合方法</td>
+<td>byte</td>
+<td>0是乘法，1是加法</td>
+</tr>
+<tr>
+<td>漫反射（扩散色）</td>
+<td>vec4</td>
+<td></td>
+</tr>
+<tr>
+<td>镜面光（反射色）</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>镜面光强度</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>环境光（环境色）</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>边缘颜色</td>
+<td>vec4</td>
+<td></td>
+</tr>
+<tr>
+<td>边缘大小</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>纹理色调</td>
+<td>vec4</td>
+<td></td>
+</tr>
+<tr>
+<td>环境色调</td>
+<td>vec4</td>
+<td></td>
+</tr>
+<tr>
+<td>贴图色调</td>
+<td>vec4</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><img src="" alt="" loading="lazy"></p>
+<p>不是很清楚环境色调（Environment tint）的意义，毕竟前面材质中光照贴图都给翻译成环境贴图了。</p>
+<h5 id="切换flip">切换（Flip）</h5>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>变形索引</td>
+<td>索引-变形</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>影响</td>
+<td>float</td>
+<td>对模型的影响</td>
+</tr>
+</tbody>
+</table>
+<p>和分组很像，<a href="https://links.jianshu.com/go?to=https%3A%2F%2Flearnmmd.com%2Fhttp%3A%2Flearnmmd.com%2Fediting-uv-morphs-mmd-models%2F" target="_blank" rel="noopener nofollow">这里</a>大致有应用。</p>
+<h5 id="脉冲impulse">脉冲（Impulse）</h5>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>刚体索引</td>
+<td>索引-刚体</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>本地标志</td>
+<td>byte</td>
+<td></td>
+</tr>
+<tr>
+<td>移动速度</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>转动扭矩</td>
+<td>vec3</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="变形数据">变形数据</h4>
+<p>依旧先以一个有符号的int开始</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>本地变形名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>通用变形名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>面板位置</td>
+<td>byte</td>
+<td>{1,2,3,4}，表情在MMD面板中处于的位置</td>
+</tr>
+<tr>
+<td>变形类型</td>
+<td>byte</td>
+<td>参阅上面的变形类型说明</td>
+</tr>
+<tr>
+<td>偏移量个数</td>
+<td>int</td>
+<td>元素的个数</td>
+</tr>
+<tr>
+<td>偏移量数据</td>
+<td>~[N]</td>
+<td>N是偏移量个数，可以为0，具体参照上面的偏移量说明</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="10表示枠">10.表示枠</h2>
+<p>一开始看着英文还很蒙（Display Frame），寻思展示帧是什么。表示枠其实就是在MMD中，模型可以注册的物件的分组（只有骨骼和变形，相机、<br>
+光照不属于模型），在MMD左侧栏，那些可以展开的就是表示枠：</p>
+<p><img src="" alt="" loading="lazy"></p>
+<h4 id="帧类型">帧类型</h4>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>类型</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>索引-骨骼</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>索引-变形</td>
+<td></td>
+<td>2.0</td>
+</tr>
+</tbody>
+</table>
+<h4 id="骨骼帧数据">骨骼帧数据</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>骨骼索引</td>
+<td>索引-骨骼</td>
+<td>参阅索引类型</td>
+</tr>
+</tbody>
+</table>
+<h4 id="变形帧数据">变形帧数据</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>变形索引</td>
+<td>索引-变形</td>
+<td>参阅索引类型</td>
+</tr>
+</tbody>
+</table>
+<h4 id="帧数据">帧数据</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>帧类型</td>
+<td>byte</td>
+<td>参阅帧类型</td>
+</tr>
+<tr>
+<td>帧数据</td>
+<td>~</td>
+<td>参阅帧数据类型</td>
+</tr>
+</tbody>
+</table>
+<h4 id="表示枠数据">表示枠数据</h4>
+<p>以一个有符号int开始作为表示枠个数</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>表示枠本地名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>表示枠通用名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>特殊标识</td>
+<td>byte</td>
+<td>0表示普通帧，1表示特殊帧</td>
+</tr>
+<tr>
+<td>帧数量</td>
+<td>int</td>
+<td>记录有多少个帧</td>
+</tr>
+<tr>
+<td>帧数据</td>
+<td>~[N]</td>
+<td>N是帧数据个数，类型参照帧数据说明</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="11刚体">11.刚体</h2>
+<h4 id="刚体形状类型">刚体形状类型</h4>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>类型</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>球</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>盒子</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>胶囊</td>
+<td></td>
+<td>2.0</td>
+</tr>
+</tbody>
+</table>
+<h4 id="物理模式">物理模式</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>追踪骨骼</td>
+<td>刚体黏在骨骼上</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>物理演算</td>
+<td>刚体使用重力</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>物理+骨骼</td>
+<td>刚体使用重力摆动骨骼</td>
+<td>2.0</td>
+</tr>
+</tbody>
+</table>
+<h4 id="刚体数据">刚体数据</h4>
+<p>刚体部分以一个int开始，用于定义有多少刚体</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>刚体本地名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>刚体通用名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>关联骨骼索引</td>
+<td>索引-骨骼</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>群组ID</td>
+<td>byte</td>
+<td></td>
+</tr>
+<tr>
+<td>非碰撞组</td>
+<td>short</td>
+<td>非碰撞组的掩码</td>
+</tr>
+<tr>
+<td>形状</td>
+<td>byte</td>
+<td>参阅刚体形状类型</td>
+</tr>
+<tr>
+<td>形状大小</td>
+<td>vec3</td>
+<td>XYZ边界</td>
+</tr>
+<tr>
+<td>形状位置</td>
+<td>vec3</td>
+<td>XYZ位置</td>
+</tr>
+<tr>
+<td>形状旋转</td>
+<td>vec3</td>
+<td>弧度制</td>
+</tr>
+<tr>
+<td>质量</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>移动衰减</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>旋转衰减</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>反应力</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>摩擦力</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>物理模式</td>
+<td>byte</td>
+<td>参阅刚体物理模式</td>
+</tr>
+</tbody>
+</table>
+<p>形状大小固定vec3不变，不过不同的刚体形状，对应的有效字节数不同，球是1字节有效（半径），箱体是3字节（长高宽），胶囊是2字节有效（半径、高）</p>
+<h2 id="12关节点">12.关节点</h2>
+<p>关节点（Joint）是用来连接刚体的“钉子”。</p>
+<h4 id="关节点类型">关节点类型</h4>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>类型</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Spring 6DOF</td>
+<td></td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>6DOF</td>
+<td></td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>P2P</td>
+<td>点结合</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>ConeTwist</td>
+<td>轴旋转</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Slider</td>
+<td>轴移动</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Hinge</td>
+<td>轴旋转</td>
+<td>2.1</td>
+</tr>
+</tbody>
+</table>
+<h4 id="关节点数据">关节点数据</h4>
+<p>关节点数据以一个有符号的int开头，标识关节点数量</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>关节点本地名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>关节点通用名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>关节点类型</td>
+<td>byte</td>
+<td>参阅关节点类型</td>
+</tr>
+<tr>
+<td>刚体索引A</td>
+<td>索引-刚体</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>刚体索引B</td>
+<td>索引-刚体</td>
+<td></td>
+</tr>
+<tr>
+<td>位置</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>旋转</td>
+<td>vec3</td>
+<td>弧度制</td>
+</tr>
+<tr>
+<td>位置最小值</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>位置最大值</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>旋转最小值</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>旋转最大值</td>
+<td>vec3</td>
+<td></td>
+</tr>
+<tr>
+<td>定位弹簧</td>
+<td>vec3</td>
+<td>弹力</td>
+</tr>
+<tr>
+<td>旋转弹簧</td>
+<td>vec3</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="13软体">13.软体</h2>
+<p>软体基于Bullet Physics，随PMX 2.1一起推出。<br>
+  我暂时还不会物理方面的知识，暂时机翻，这部分等学一学Bullet后再来补全。</p>
+<h4 id="形状类型">形状类型</h4>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>类型</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>TriMesh</td>
+<td>三角网格</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Rope</td>
+<td>绳</td>
+<td>2.1</td>
+</tr>
+</tbody>
+</table>
+<h4 id="标识">标识</h4>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>类型</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>B-Link</td>
+<td></td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Cluster creation</td>
+<td></td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Link crossing</td>
+<td></td>
+<td>2.1</td>
+</tr>
+</tbody>
+</table>
+<h4 id="空气动力学模型">空气动力学模型</h4>
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>类型</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>V-Point</td>
+<td></td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>V-TwoSided</td>
+<td></td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>V-OneSided</td>
+<td></td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>F-TwoSided</td>
+<td></td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>4</td>
+<td>F-OneSided</td>
+<td></td>
+<td>2.1</td>
+</tr>
+</tbody>
+</table>
+<h4 id="锚固刚体">锚固刚体</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>刚体索引</td>
+<td>索引-刚体</td>
+<td>参照索引类型</td>
+</tr>
+<tr>
+<td>顶点索引</td>
+<td>索引-顶点</td>
+<td></td>
+</tr>
+<tr>
+<td>Near mode</td>
+<td>byte</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="顶点针脚">顶点针脚</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>顶点索引</td>
+<td>索引-顶点</td>
+<td>参照索引类型</td>
+</tr>
+</tbody>
+</table>
+<h4 id="软体数据">软体数据</h4>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>软体本地名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>软体通用名称</td>
+<td>text</td>
+<td></td>
+</tr>
+<tr>
+<td>形状</td>
+<td>byte</td>
+<td>参阅软体形状类型</td>
+</tr>
+<tr>
+<td>材质索引</td>
+<td>索引-材质</td>
+<td>参阅索引类型</td>
+</tr>
+<tr>
+<td>组</td>
+<td>byte</td>
+<td>组ID</td>
+</tr>
+<tr>
+<td>碰撞体掩码</td>
+<td>short</td>
+<td></td>
+</tr>
+<tr>
+<td>标识</td>
+<td>flag</td>
+<td>见软体标识</td>
+</tr>
+<tr>
+<td>B-link create distance</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>Number of clusters</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>总质量</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>Collision margin</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>空气动力学模型</td>
+<td>int</td>
+<td>参照空气动力学模型</td>
+</tr>
+<tr>
+<td>VCF配置</td>
+<td>float</td>
+<td>速度修正系数</td>
+</tr>
+<tr>
+<td>DP配置</td>
+<td>float</td>
+<td>阻尼系数</td>
+</tr>
+<tr>
+<td>DG配置</td>
+<td>float</td>
+<td>阻力系数</td>
+</tr>
+<tr>
+<td>LF配置</td>
+<td>float</td>
+<td>提升系数</td>
+</tr>
+<tr>
+<td>PR配置</td>
+<td>float</td>
+<td>压力系数</td>
+</tr>
+<tr>
+<td>VC配置</td>
+<td>float</td>
+<td>音量对话系数</td>
+</tr>
+<tr>
+<td>DF配置</td>
+<td>float</td>
+<td>动摩擦系数</td>
+</tr>
+<tr>
+<td>MT配置</td>
+<td>float</td>
+<td>姿势匹配系数</td>
+</tr>
+<tr>
+<td>CHR配置</td>
+<td>float</td>
+<td>刚性接触硬度</td>
+</tr>
+<tr>
+<td>KHR配置</td>
+<td>float</td>
+<td>动力学接触硬度</td>
+</tr>
+<tr>
+<td>SHR配置</td>
+<td>float</td>
+<td>软接触硬度</td>
+</tr>
+<tr>
+<td>AHR配置</td>
+<td>float</td>
+<td>锚固硬度</td>
+</tr>
+<tr>
+<td>Cluster SRHR_CL</td>
+<td>float</td>
+<td>软硬度与刚硬度</td>
+</tr>
+<tr>
+<td>Cluster SKHR_CL</td>
+<td>float</td>
+<td>柔软与动力学硬度</td>
+</tr>
+<tr>
+<td>Cluster SSHR_CL</td>
+<td>float</td>
+<td>柔软与柔软的硬度</td>
+</tr>
+<tr>
+<td>Cluster SR_SPLT_CL</td>
+<td>float</td>
+<td>软与刚冲动分裂</td>
+</tr>
+<tr>
+<td>Cluster SK_SPLT_CL</td>
+<td>float</td>
+<td>软与动能冲动分裂</td>
+</tr>
+<tr>
+<td>Cluster SS_SPLT_CL</td>
+<td>float</td>
+<td>软与软冲动分裂</td>
+</tr>
+<tr>
+<td>Interation V_IT</td>
+<td>int</td>
+<td>速度求解器迭代</td>
+</tr>
+<tr>
+<td>Interation P_IT</td>
+<td>int</td>
+<td>定位求解器迭代</td>
+</tr>
+<tr>
+<td>Interation D_IT</td>
+<td>int</td>
+<td>漂移求解器迭代</td>
+</tr>
+<tr>
+<td>Interation C_IT</td>
+<td>int</td>
+<td>群集解算器迭代</td>
+</tr>
+<tr>
+<td>Material LST</td>
+<td>int</td>
+<td>线性刚度系数</td>
+</tr>
+<tr>
+<td>Material AST</td>
+<td>int</td>
+<td>面积/角度刚度系数</td>
+</tr>
+<tr>
+<td>Material VST</td>
+<td>int</td>
+<td>体积刚度系数</td>
+</tr>
+<tr>
+<td>Anchor rigid body count</td>
+<td>int</td>
+<td>锚固刚体个数</td>
+</tr>
+<tr>
+<td>Anchor rigid bodies</td>
+<td>~[N]</td>
+<td>N是锚固刚体计数。参见锚固刚体说明</td>
+</tr>
+<tr>
+<td>Vertex pin count</td>
+<td>int</td>
+<td>顶点引脚个数</td>
+</tr>
+<tr>
+<td>Vertex pins</td>
+<td>~[N]</td>
+<td>N是顶点引脚计数。参见顶点引脚说明</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14样例代码">14.样例代码</h2>
+<p>因为不清楚软体方面，所以没有读取软体数据，不过数据组织套路都一样，有需求可以自己写。代码只考虑2.1版本，2.0版本根据各处版本描述自行更改适应程序。<br>
+  因为需要先实验一次，所以用Python，写起来更快一些；C++需要考虑组织程序以及数据类型，Opengl还没学到家，现在只读出了顶点数据，等写出差不多的模型读取器后，再把C++程序放上来。或者直接上github搜索已有现成的mmd读取器saba，参考src/Saba/Model/MMD/PMXFile.h文件，我的C++pmx文件读取程序也是参考这个写法。</p>
+<p>初始化：</p>
+<p>PMX对象的成员参考staticmethod上面的注释。</p>
+
+</div>
+<div class="clear"></div>
+<div id="blog_post_info_block" role="contentinfo">
+    <div id="blog_post_info"></div>
+    <div class="clear"></div>
+    <div id="post_next_prev"></div>
+</div>
+            </div>
+            <div class="postDesc">posted @ 
+<span id="post-date" data-last-update-days="0" data-date-updated="2023-07-11 15:10">2023-07-11 15:09</span>&nbsp;
+<a href="https://www.cnblogs.com/ifwz">ifwz1729</a>&nbsp;
+阅读(<span id="post_view_count">3190</span>)&nbsp;
+评论(<span id="post_comment_count">0</span>)&nbsp;
+&nbsp;
+<a href="javascript:void(0)" onclick="AddToWz(17544729);return false;">收藏</a>&nbsp;
+<a href="javascript:void(0)" onclick="reportManager.report({ currentUserId: '', targetType: 'blogPost', targetId: '17544729', targetLink: 'https://www.cnblogs.com/ifwz/p/17544729.html', title: '【MMD】PMX文件格式解析  作者：crossous' })">举报</a>
+</div>
+        </div>
+	    
+	    
+    </div><!--end: topics 文章、评论容器-->
+</div>
+<script>
+    var cb_entryId = 17544729, cb_entryCreatedDate = '2023-07-11 15:09', cb_postType = 1, cb_postTitle = '【MMD】PMX文件格式解析  作者：crossous';
+    var allowComments = true, cb_blogId = 652444, cb_blogApp = 'ifwz', cb_blogUserGuid = 'af48eb4b-fc51-412d-8e08-08d6e011cefe';
+    mermaidRender.render()
+    markdown_highlight()
+    zoomManager.apply("#cnblogs_post_body img:not(.code_img_closed):not(.code_img_opened)");    
+</script>
+<a id="!comments"></a>
+<div id="blog-comments-placeholder"></div>
+<div id="comment_form" class="commentform">
+    <a name="commentform"></a>
+    <div id="divCommentShow"></div>
+    <div id="comment_nav">
+        <div class="comment-nav-right">
+            <span id="span_refresh_tips"></span><a href="#" onclick="return RefreshPage();">刷新页面</a><a href="#top">返回顶部</a>
+        </div>
+    </div>
+    <div id="comment_form_container"></div>
+    <div class="ad_text_commentbox" id="ad_text_under_commentbox"></div>
+        <div id="cnblogs_ch"></div>
+    <div id="opt_under_post"></div>
+        <div id="blog_c1" class="under-post-card below-post-card">
+            <a href="https://ais.cn/u/VZZZJj" rel="nofollow" target="_blank" onclick="countCreativeClicks('C1-艾思科蓝')">
+                <img src="https://img2024.cnblogs.com/blog/35695/202512/35695-20251205182619157-1150461542.webp" onload="countCreativeImpressions('C1-艾思科蓝')" alt="" style="width:300px!important;height:250px!important;min-width:300px!important;max-width:300px!important;" />
+                <span id="c1_impression" style="display:none"></span>
+            </a>
+        </div>
+    <div id="under_post_card1"></div>
+    <div id="related_posts_card"></div>
+    <div id="under_post_card2"></div>
+    <div id="HistoryToday" class="under-post-card below-post-card"></div>
+    <script type="text/javascript">
+        var commentManager = new blogCommentManager();
+        commentManager.renderComments(0);
+        fixPostBody();
+        window.footnoteTipManager.generateFootnoteTips();
+
+            window.tocManager.displayDisableTocTips = false;
+            window.tocManager.generateToc();
+            
+            setTimeout(function() { countViews(cb_blogId, cb_entryId); }, 50);
+            
+            deliverT2();
+            deliverC1C2();
+            loadNewsAndKb();
+            
+            LoadPostCategoriesTags(cb_blogId, cb_entryId);
+            
+            LoadPostInfoBlock(cb_blogId, cb_entryId, cb_blogApp, cb_blogUserGuid);
+            GetPrevNextPost(cb_entryId, cb_blogId, cb_entryCreatedDate, cb_postType);
+            loadOptUnderPost();
+            GetHistoryToday(cb_blogId, cb_blogApp, cb_entryCreatedDate);
+                </script>
+</div>
+
+	</div>
+	</div>
+	<div id="sideBar">
+		<div id="sideBarMain">
+			<div id="sidebar_news" class="newsItem">
+    <h3 class="catListTitle">公告</h3>
+<div id="blog-news" class="sidebar-news">
+    <div id="sidebar_news_container">
+    </div>
+</div>
+<script>loadBlogNews();</script>
+
+
+</div>
+			<div id="blog-calendar" style="display:none"></div><script>loadBlogDefaultCalendar();</script>			
+			<div id="leftcontentcontainer">
+				<div id="blog-sidecolumn"></div>
+                    <script>loadBlogSideColumn();</script>
+			</div>			
+		</div>
+	</div>
+	<div class="clear"></div>
+	</div>
+	<div class="clear"></div>
+	<div id="footer">
+		<a href="https://www.cnblogs.com/" id="footer_site_link" class="footer-brand">博客园</a>
+<span class="footer-copyright"> &nbsp;&copy;&nbsp; 2004-2025</span>
+<br /><span class="footer-icp">
+    <a target="_blank" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33010602011771"><img src="//assets.cnblogs.com/images/ghs.png" />浙公网安备 33010602011771号</a>
+    <a href="https://beian.miit.gov.cn" target="_blank">浙ICP备2021040463号-3</a>
+</span>
+
+
+
+	</div>
+</div>
+
+
+
+    <div id="page_end_html">
+        
+
+<link rel="stylesheet" href="https://cdn.cnblogs.com/npm/aplayer@1.10.0/dist/APlayer.min.css">
+<script src="https://blog-static.cnblogs.com/files/ysysbky/APlayer.min.js"></script>
+<div id="aplayer" class="aplayer" data-id="461884936" data-server="netease" data-type="playlist" data-fixed="true" data-listfolded="true" data-order="random" data-theme="#F58EA8"></div>
+<script src="https://unpkg.com/meting@1.2/dist/Meting.min.js"></script>
+
+<!-- live2d
+<link rel="stylesheet" href="https://cdn.cnblogs.com/npm/font-awesome/css/font-awesome.min.css">
+<script src="https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/autoload.js"></script>
+-->
+
+<!-- @format -->
+ ​
+ <script src="https://cdn.cnblogs.com/awescnb/index.js"></script>
+ <script>
+   const opts = {
+     // 基本配置
+     theme: {
+       name: 'geek', // 要使用的皮肤
+       color: '', // 全局主题色，默认跟随皮肤
+       title: '小熊的窝', // 网站标题
+       avatar: 'https://pic1.afdiancdn.com/user/3410cb663b4011e985bd52540025c377/avatar/714689e332b2e1b96db4e1616f527f88_w300_h300_s33.jpg', // 头像url
+       favicon: '', // 网站图标
+       headerBackground: 'https://pic1.afdiancdn.com/user/3410cb663b4011e985bd52540025c377/common/84322d084dfe6ff06beed0401375e0c6_w1590_h810_s1903.png', //背景图url
+     },
+     // 代码高亮
+     highLight: {
+       enable: true,
+     },
+     // 代码行号
+     lineNumbers: {
+       enable: true,
+     },
+     // github图标
+     github: {
+       enable: false,
+       color: '#FFB3CC',
+       url: '',
+     },
+     // 码云图标
+     gitee: {
+       enable: false,
+       url: '',
+     },
+     // 图片灯箱，点击图片单独显示
+     imagebox: {
+       enable: true,
+     },
+     // 文章目录
+     catalog: {
+       enable: true,
+       position: 'left',
+     },
+     // 右下角按钮组
+     tools: {
+       enable: true,
+       initialOpen: true,
+     },
+     // live2d模型
+     live2d: {
+       enable: false,
+       page: 'all',
+       agent: 'pc',
+       model: 'random',
+       width: 150,
+       height: 200,
+       position: 'left',
+       gap: 'default',
+     },
+     // 点击特效
+     click: {
+       enable: true,
+       auto: true,
+       colors: ['#FF1461', '#18FF92', '#5A87FF', '#FBF38C'],
+       size: 30,
+       maxCount: 50,
+     },
+     // 评论输入框表情
+     emoji: {
+    enable: true,
+    buttonIcon: "🥳",
+    emojiList: [
+        {
+          value: 'https://images.cnblogs.com/cnblogs_com/gshang/1626876/o_2001050555139.png',
+          label: '',
+        },
+        {
+            value: '🤣',
+            label: '笑哭',
+        },
+        {
+            value: '😃',
+            label: '大笑',
+        },
+        {
+            value: '😅',
+            label: '苦笑',
+        },
+        {
+            value: '😆',
+            label: '斜眼笑',
+        },
+        {
+            value: '😏',
+            label: '得意',
+        },
+        {
+            value: '😊',
+            label: '微笑',
+        },
+        {
+            value: '😎',
+            label: '酷！',
+        },
+        {
+            value: '😍',
+            label: '花痴',
+        },
+        {
+            value: '🙂',
+            label: '呵呵',
+        },
+        {
+            value: '🤩',
+            label: '好崇拜哦',
+        },
+        {
+            value: '🤔',
+            label: '思考',
+        },
+        {
+            value: '🙄',
+            label: '白眼',
+        },
+        {
+            value: '😜',
+            label: '略略略',
+        },
+        {
+            value: '😲',
+            label: '呆住',
+        },
+        {
+            value: '😭',
+            label: '大哭',
+        },
+        {
+            value: '🤯',
+            label: '头炸了',
+        },
+        {
+            value: '😰',
+            label: '冷汗',
+        },
+        {
+            value: '😱',
+            label: '吓死了',
+        },
+        {
+            value: '🤪',
+            label: '略略略',
+        },
+        {
+            value: '😵',
+            label: '晕',
+        },
+        {
+            value: '😡',
+            label: '愤怒',
+        },
+        {
+            value: '🥳',
+            label: '祝贺',
+        },
+        {
+            value: '🤡',
+            label: '小丑竟是我',
+        },
+        {
+            value: '🤫',
+            label: '嘘~',
+        },
+        {
+            value: '🐒',
+            label: '猴',
+        },
+        {
+            value: '🤭',
+            label: '笑笑不说话',
+        },
+        {
+            value: '🐂',
+            label: '牛',
+        },
+        {
+            value: '🍺',
+            label: '啤酒',
+        },
+        {
+            value: '(=・ω・=)',
+            label: '',
+        },
+        {
+            value: '(｀・ω・´)',
+            label: '',
+        },
+        {
+            value: '(°∀°)ﾉ',
+            label: '',
+        },
+        {
+            value: '←_←',
+            label: '',
+        },
+        {
+            value: '→_→',
+            label: '',
+        },
+        {
+            value: 'Σ(ﾟдﾟ;)',
+            label: '',
+        },
+        {
+            value: '(｡･ω･｡)',
+            label: '',
+        },
+         {
+             value: '(-_-#)',
+             label: '',
+         },
+    ]
+},
+     // 暗色模式
+     darkMode: {
+       enable: true,
+       darkDefault: false, // 是否默认设置暗色模式
+       autoDark: true,
+       autoLight: true,
+     },
+     // 音乐播放器
+     musicPlayer: {
+       enable: false,
+       page: 'all',
+       agent: 'pc',
+       autoplay: false,
+       volume: 0.4,
+       lrc: {
+         enable: false, // 启用歌词
+         type: 1, // 1 -> 字符串歌词 3 -> url 歌词
+         color: '', // 颜色
+       },
+       audio: [
+         {
+           name: '404 not found',
+           artist: 'REOL',
+           url: 'https://cdn.cnblogs.com/imagehost/awescnb/music/demo4.mp3',
+           cover: 'https://cdn.cnblogs.com/imagehost/awescnb/music/demo.jpg',
+           lrc: ``,
+         },
+       ],
+     },
+     // 随笔头图
+     postTopimage: {
+       enable: false,
+       fixed: true, // 视差滚动
+       imgs: [], // 图片url列表
+     },
+     // 随笔尾图
+     postBottomimage: {
+       enable: false,
+       img: '',
+       height: '200px',
+     },
+     // 打赏二维码
+     donation: {
+       enable: false,
+       img: '',
+       qrcodes: [],
+       desc: '', // 描述
+     },
+     // 个性签名，在背景图上的打字效果
+     signature: {
+       enable: true,
+       contents: ['踏破铁鞋无觅处，得来全不费工夫'],
+     },
+     // 侧边栏二维码
+     qrcode: {
+       enable: false,
+       img: '',
+       desc: '',
+     },
+     // 弹出公告
+     notice: {
+       enable: true,
+       text: ['欢迎来到小熊的窝'],
+     },
+     // 首页列表图
+     indexListImg: {
+       enable: false,
+       imgs: [], // 图片url列表
+     },
+     // 顶部加载进度条
+     topProgress: {
+       enable: false,
+       page: 'all',
+       agent: 'pc',
+       background: '#FFB3CC',
+       height: '5px',
+     },
+     // 随笔页尾部签名
+     postSignature: {
+       enable: true,
+       enableLicense: true,
+       link: '',
+       licenseName: '',
+       licenseLink: '',
+       content: [],
+     },
+     // 背景图片或颜色
+     bodyBackground: {
+       enable: false,
+       value: 'https://i0.hdslb.com/bfs/article/dad45bce43dea1038feac79f022da47c1f6b68f6.jpg',
+       opacity: 0.9,
+       repeat: false,
+     },
+     // 弹幕
+     barrage: {
+       enable: false,
+       opacity: 0.6,
+       colors: [],
+       fontSize: '16px',
+       barrages: [], // 全局弹幕
+       indexBarrages: [], // 首页弹幕
+       postPageBarrages: [], // 博文页弹幕
+     },
+     // 图表，不如使用eCharts
+     charts: {
+       enable: false,
+     },
+     // 锁屏
+     lock: {
+       enable: false,
+       background: 'https://getwallpapers.com/wallpaper/full/7/a/4/28555.jpg', // 背景图片，默认随机
+       strings: [''],
+     },
+     // 自定义链接链接
+     links: [
+       {
+         name: '闪存',
+         link: 'https://ing.cnblogs.com/',
+       },
+       // ......
+     ],
+     // 画笔，将Markdown的一些线条使用拟人画笔代替
+     notation: {
+       enable: false,
+     },
+   }
+   $.awesCnb(opts)
+ </script>
+    </div>
+
+    <input type="hidden" id="antiforgery_token" value="CfDJ8CE1tT_puDpHgc1zrpsLVP_CnwpoyjZMaJkqE740NGBhr8reS_QIoXgxpTYysEEYLyQ-Oj175_7Gw6KlkiFVMxLVRNMFZjTYK2wHNgP8oobdhZDcUr99Ge3ojVZFqi19kMtokfXkO7xIpMhCWAcEBM0" />
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-M95P3TTWJZ"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-M95P3TTWJZ');
+</script>
+<script defer src="https://hm.baidu.com/hm.js?866c9be12d4a814454792b1fd0fed295"></script>
+</body>
+</html>

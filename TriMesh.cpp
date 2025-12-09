@@ -137,7 +137,6 @@ void TriMesh::readPmx(const std::string& filename) {
 }
 
 void TriMesh::loadOpenGLTextures(const std::string& modelBasePath) {
-    // This function remains the same as your working version
     stbi_set_flip_vertically_on_load(true);
     for (auto& texInfo : textures) {
         if (texInfo.path.empty()) continue;
