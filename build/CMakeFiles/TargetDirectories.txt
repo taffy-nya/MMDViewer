@@ -1,3 +1,0 @@
-C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/build/CMakeFiles/MMDViewer.dir
-C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/build/CMakeFiles/edit_cache.dir
-C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/build/CMakeFiles/rebuild_cache.dir

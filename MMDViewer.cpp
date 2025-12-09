@@ -9,8 +9,8 @@
 
 // --- Global Variables ---
 const std::string pmx_path = "models/taffy/taffy.pmx";
-// const std::string vmd_path = "motions/TDA.vmd";
-const std::string vmd_path = "motions/daisukeEvolution.vmd";
+const std::string vmd_path = "motions/TDA.vmd";
+// const std::string vmd_path = "motions/maodie.vmd";
 
 Camera* camera = nullptr;
 MeshPainter* painter = nullptr;

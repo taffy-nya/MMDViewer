@@ -22,22 +22,11 @@ aux_source_directory("./" PROJECT_SOURCES)
 add_executable(MMDViewer ${PROJECT_SOURCES})
 target_include_directories(MMDViewer PRIVATE include)
 
-
-if(APPLE)
-
-	find_package(glfw3 CONFIG REQUIRED)
-	find_package(glm CONFIG REQUIRED)
-	# link
-
-   	target_link_libraries(MMDViewer PRIVATE glfw)
-	target_link_libraries(MMDViewer PRIVATE glm::glm)
-else()
-	# dependency
-	# find_package(glad CONFIG REQUIRED)
-	find_package(glfw3 CONFIG REQUIRED)
-	find_package(glm CONFIG REQUIRED)
-	# link
-	# target_link_libraries(MMDViewer PRIVATE glad::glad)
-   	target_link_libraries(MMDViewer PRIVATE glfw)
-	target_link_libraries(MMDViewer PRIVATE glm::glm)
-endif(APPLE)
+# dependency
+# find_package(glad CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+# link
+# target_link_libraries(MMDViewer PRIVATE glad::glad)
+target_link_libraries(MMDViewer PRIVATE glfw)
+target_link_libraries(MMDViewer PRIVATE glm::glm)
