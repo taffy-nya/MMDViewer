@@ -9,6 +9,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/MMDViewer.dir/MeshPainter.cpp.obj.d"
   "CMakeFiles/MMDViewer.dir/TriMesh.cpp.obj"
   "CMakeFiles/MMDViewer.dir/TriMesh.cpp.obj.d"
+  "CMakeFiles/MMDViewer.dir/VMDAnimation.cpp.obj"
+  "CMakeFiles/MMDViewer.dir/VMDAnimation.cpp.obj.d"
   "CMakeFiles/MMDViewer.dir/glad.c.obj"
   "CMakeFiles/MMDViewer.dir/glad.c.obj.d"
   "MMDViewer.exe"

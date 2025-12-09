@@ -15,6 +15,11 @@ struct OpenGLObject {
     GLuint brightnessLocation, hasTextureLocation, shininessLocation;
     GLuint edgeSizeLocation, edgeColorLocation; // For edge shader
     GLuint textureSamplerLocation, toonSamplerLocation;
+    GLuint boneMatricesLocation;
+    
+    // TBO for bones
+    GLuint boneTbo = 0;
+    GLuint boneTexture = 0;
 };
 
 class MeshPainter

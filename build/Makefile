@@ -248,6 +248,30 @@ TriMesh.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/TriMesh.cpp.s
 .PHONY : TriMesh.cpp.s
 
+VMDAnimation.obj: VMDAnimation.cpp.obj
+.PHONY : VMDAnimation.obj
+
+# target to build an object file
+VMDAnimation.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/VMDAnimation.cpp.obj
+.PHONY : VMDAnimation.cpp.obj
+
+VMDAnimation.i: VMDAnimation.cpp.i
+.PHONY : VMDAnimation.i
+
+# target to preprocess a source file
+VMDAnimation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/VMDAnimation.cpp.i
+.PHONY : VMDAnimation.cpp.i
+
+VMDAnimation.s: VMDAnimation.cpp.s
+.PHONY : VMDAnimation.s
+
+# target to generate assembly for a file
+VMDAnimation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/VMDAnimation.cpp.s
+.PHONY : VMDAnimation.cpp.s
+
 glad.obj: glad.c.obj
 .PHONY : glad.obj
 
@@ -296,6 +320,9 @@ help:
 	@echo ... TriMesh.obj
 	@echo ... TriMesh.i
 	@echo ... TriMesh.s
+	@echo ... VMDAnimation.obj
+	@echo ... VMDAnimation.i
+	@echo ... VMDAnimation.s
 	@echo ... glad.obj
 	@echo ... glad.i
 	@echo ... glad.s

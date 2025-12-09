@@ -1,6 +1,7 @@
 #include "MeshPainter.h"
 #include "Angel.h"
 #include <iostream>
+#include <glm/gtc/type_ptr.hpp>
 
 MeshPainter::MeshPainter() {}
 MeshPainter::~MeshPainter() { cleanUp(); }
@@ -15,6 +16,9 @@ void MeshPainter::cleanUp() {
         if (entry.edgeObject.program != 0) {
             glDeleteProgram(entry.edgeObject.program);
         }
+        
+        if (entry.mainObject.boneTbo != 0) glDeleteBuffers(1, &entry.mainObject.boneTbo);
+        if (entry.mainObject.boneTexture != 0) glDeleteTextures(1, &entry.mainObject.boneTexture);
     }
     meshes.clear();
 }
@@ -39,6 +43,7 @@ void MeshPainter::addMesh(TriMesh* mesh, const std::string& vshader, const std::
     entry.mainObject.shininessLocation = glGetUniformLocation(entry.mainObject.program, "shininess");
     entry.mainObject.textureSamplerLocation = glGetUniformLocation(entry.mainObject.program, "textureSampler");
     entry.mainObject.toonSamplerLocation = glGetUniformLocation(entry.mainObject.program, "toonSampler");
+    entry.mainObject.boneMatricesLocation = glGetUniformLocation(entry.mainObject.program, "boneMatrices");
 
     
     entry.edgeObject.program = InitShader(vshader_edge.c_str(), fshader_edge.c_str());
@@ -47,6 +52,7 @@ void MeshPainter::addMesh(TriMesh* mesh, const std::string& vshader, const std::
     entry.edgeObject.projectionLocation = glGetUniformLocation(entry.edgeObject.program, "projection");
     entry.edgeObject.edgeSizeLocation = glGetUniformLocation(entry.edgeObject.program, "edge_size");
     entry.edgeObject.edgeColorLocation = glGetUniformLocation(entry.edgeObject.program, "edge_color");
+    entry.edgeObject.boneMatricesLocation = glGetUniformLocation(entry.edgeObject.program, "boneMatrices");
     
     // We share VAO for edge pass
     entry.edgeObject.vao = entry.mainObject.vao; 
@@ -61,8 +67,9 @@ void MeshPainter::bindObjectAndData(TriMesh* mesh, OpenGLObject& object, const s
     const auto &p = mesh->getVertexPositions();
     const auto &n = mesh->getVertexNormals();
     const auto &u = mesh->getVertexUVs();
+    const auto &b = mesh->getVertexBoneData();
     
-    if (p.empty() || p.size() != n.size() || p.size() != u.size()) { 
+    if (p.empty() || p.size() != n.size() || p.size() != u.size() || p.size() != b.size()) { 
         std::cerr << "Vertex attribute mismatch!" << std::endl; 
         return; 
     }
@@ -70,13 +77,15 @@ void MeshPainter::bindObjectAndData(TriMesh* mesh, OpenGLObject& object, const s
     size_t p_size = p.size()*sizeof(glm::vec3);
     size_t n_size = n.size()*sizeof(glm::vec3);
     size_t u_size = u.size()*sizeof(glm::vec2);
+    size_t b_size = b.size()*sizeof(VertexBoneData);
     
     glGenBuffers(1, &object.vbo);
     glBindBuffer(GL_ARRAY_BUFFER, object.vbo);
-    glBufferData(GL_ARRAY_BUFFER, p_size+n_size+u_size, NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, p_size+n_size+u_size+b_size, NULL, GL_STATIC_DRAW);
     glBufferSubData(GL_ARRAY_BUFFER, 0, p_size, p.data());
     glBufferSubData(GL_ARRAY_BUFFER, p_size, n_size, n.data());
     glBufferSubData(GL_ARRAY_BUFFER, p_size+n_size, u_size, u.data());
+    glBufferSubData(GL_ARRAY_BUFFER, p_size+n_size+u_size, b_size, b.data());
     
     glGenBuffers(1, &object.ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object.ebo);
@@ -87,6 +96,19 @@ void MeshPainter::bindObjectAndData(TriMesh* mesh, OpenGLObject& object, const s
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0)); glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(p_size)); glEnableVertexAttribArray(1);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(p_size+n_size)); glEnableVertexAttribArray(2);
+
+    // Bone Indices (ivec4)
+    glVertexAttribIPointer(3, 4, GL_INT, sizeof(VertexBoneData), BUFFER_OFFSET(p_size+n_size+u_size)); 
+    glEnableVertexAttribArray(3);
+    
+    // Bone Weights (vec4)
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(VertexBoneData), BUFFER_OFFSET(p_size+n_size+u_size + sizeof(glm::ivec4))); 
+    glEnableVertexAttribArray(4);
+
+    // Initialize TBO for bones
+    glGenBuffers(1, &object.boneTbo);
+    glBindBuffer(GL_TEXTURE_BUFFER, object.boneTbo);
+    glGenTextures(1, &object.boneTexture);
 }
 
 void MeshPainter::drawMeshes(Camera* camera, const glm::vec3& lightPos, float brightness) {
@@ -97,12 +119,35 @@ void MeshPainter::drawMeshes(Camera* camera, const glm::vec3& lightPos, float br
     for (const auto& entry : meshes) {
         glm::mat4 model = entry.mesh->getModelMatrix();
         
+        // Prepare bone matrices
+        std::vector<glm::mat4> boneTransforms;
+        auto& bones = entry.mesh->getBones();
+        if (!bones.empty()) {
+            boneTransforms.reserve(bones.size());
+            for (const auto& bone : bones) {
+                boneTransforms.push_back(bone.global_transform * bone.offset_matrix);
+            }
+        }
+
         glBindVertexArray(entry.mainObject.vao);
 
         // Pass 1: Outline
         glEnable(GL_CULL_FACE);
         glCullFace(GL_FRONT);
         glUseProgram(entry.edgeObject.program);
+        
+        if (!boneTransforms.empty()) {
+             // Update TBO
+             glBindBuffer(GL_TEXTURE_BUFFER, entry.mainObject.boneTbo);
+             glBufferData(GL_TEXTURE_BUFFER, boneTransforms.size() * sizeof(glm::mat4), boneTransforms.data(), GL_DYNAMIC_DRAW);
+             
+             // Bind TBO to Texture Unit 2
+             glActiveTexture(GL_TEXTURE2);
+             glBindTexture(GL_TEXTURE_BUFFER, entry.mainObject.boneTexture);
+             glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, entry.mainObject.boneTbo);
+             
+             glUniform1i(entry.edgeObject.boneMatricesLocation, 2);
+        }
         
         glUniformMatrix4fv(entry.edgeObject.modelLocation, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(entry.edgeObject.viewLocation, 1, GL_FALSE, glm::value_ptr(view));
@@ -119,6 +164,17 @@ void MeshPainter::drawMeshes(Camera* camera, const glm::vec3& lightPos, float br
         // Pass 2: Main Model
         glCullFace(GL_BACK);
         glUseProgram(entry.mainObject.program);
+        
+        if (!boneTransforms.empty()) {
+             // Bind TBO to Texture Unit 2 (already updated)
+             glActiveTexture(GL_TEXTURE2);
+             glBindTexture(GL_TEXTURE_BUFFER, entry.mainObject.boneTexture);
+             // glTexBuffer is associated with the texture object, so binding the texture is enough if we didn't change the buffer association
+             // But to be safe/clear:
+             // glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, entry.mainObject.boneTbo); 
+             
+             glUniform1i(entry.mainObject.boneMatricesLocation, 2);
+        }
         
         glUniformMatrix4fv(entry.mainObject.modelLocation, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(entry.mainObject.viewLocation, 1, GL_FALSE, glm::value_ptr(view));

@@ -218,6 +218,42 @@ CMakeFiles/MMDViewer.dir/MeshPainter.cpp.obj: \
  C:/Program\ Files/msys64/ucrt64/include/glm/detail/type_half.inl \
  C:/Program\ Files/msys64/ucrt64/include/glm/integer.hpp \
  C:/Program\ Files/msys64/ucrt64/include/glm/detail/func_integer.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/gtc/quaternion.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/gtc/constants.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/scalar_constants.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/scalar_constants.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/gtc/constants.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/gtc/matrix_transform.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_projection.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_projection.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_clip_space.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_clip_space.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_transform.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_transform.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/gtc/matrix_transform.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/vector_relational.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/vector_relational.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/detail/type_float.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_common.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_geometric.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_geometric.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_common.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_float.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/detail/type_quat.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_relational.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_relational.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/detail/type_quat.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_float_precision.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_double.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_double_precision.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_trigonometric.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_trigonometric.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_transform.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_transform.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/gtc/quaternion.inl \
+ C:/Program\ Files/msys64/ucrt64/include/glm/gtc/epsilon.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/detail/setup.hpp \
+ C:/Program\ Files/msys64/ucrt64/include/glm/gtc/epsilon.inl \
  C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/vector \
  C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/allocator.h \
  C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/x86_64-w64-mingw32/bits/c++allocator.h \
@@ -330,46 +366,17 @@ CMakeFiles/MMDViewer.dir/MeshPainter.cpp.obj: \
  C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/sstream \
  C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/sstream.tcc \
  C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/iostream \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/map \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/stl_tree.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/ext/aligned_buffer.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/node_handle.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/stl_map.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/stl_multimap.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/erase_if.h \
  C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/include/Camera.h \
  C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/include/Angel.h \
  C:/Program\ Files/msys64/ucrt64/include/GLFW/glfw3.h \
- C:/Program\ Files/msys64/ucrt64/include/glm/gtc/matrix_transform.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_projection.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/gtc/constants.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/scalar_constants.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/scalar_constants.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/gtc/constants.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_projection.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_clip_space.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_clip_space.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_transform.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/matrix_transform.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/gtc/matrix_transform.inl \
  C:/Program\ Files/msys64/ucrt64/include/glm/gtc/type_ptr.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/gtc/quaternion.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/vector_relational.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/vector_relational.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/detail/type_float.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_common.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_geometric.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_geometric.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_common.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_float.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/detail/type_quat.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_relational.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_relational.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/detail/type_quat.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_float_precision.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_double.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_double_precision.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_trigonometric.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_trigonometric.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_transform.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/ext/quaternion_transform.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/gtc/quaternion.inl \
- C:/Program\ Files/msys64/ucrt64/include/glm/gtc/epsilon.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/detail/setup.hpp \
- C:/Program\ Files/msys64/ucrt64/include/glm/gtc/epsilon.inl \
  C:/Program\ Files/msys64/ucrt64/include/glm/gtc/vec1.hpp \
  C:/Program\ Files/msys64/ucrt64/include/glm/ext/vector_bool1.hpp \
  C:/Program\ Files/msys64/ucrt64/include/glm/ext/vector_bool1_precision.hpp \

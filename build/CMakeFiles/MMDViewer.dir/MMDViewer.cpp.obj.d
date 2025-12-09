@@ -385,8 +385,16 @@ CMakeFiles/MMDViewer.dir/MMDViewer.cpp.obj: \
  C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/fstream.tcc \
  C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/sstream \
  C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/sstream.tcc \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/map \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/stl_tree.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/ext/aligned_buffer.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/node_handle.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/stl_map.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/stl_multimap.h \
+ C:/Program\ Files/msys64/ucrt64/include/c++/15.2.0/bits/erase_if.h \
  C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/include/Camera.h \
  C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/include/Angel.h \
  C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/include/MeshPainter.h \
  C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/include/TriMesh.h \
- C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/include/Camera.h
+ C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/include/Camera.h \
+ C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/include/VMDAnimation.h

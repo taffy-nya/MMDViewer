@@ -31,6 +31,12 @@
 },
 {
   "directory": "C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/build",
+  "command": "C:\\PROGRA~1\\msys64\\ucrt64\\bin\\g++.exe -DGLFW_DLL @CMakeFiles/MMDViewer.dir/includes_CXX.rsp -g -std=c++20 -o CMakeFiles\\MMDViewer.dir\\VMDAnimation.cpp.obj -c C:\\Users\\Crafter\\OneDrive\\Code\\repo\\MMDViewer\\VMDAnimation.cpp",
+  "file": "C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/VMDAnimation.cpp",
+  "output": "CMakeFiles/MMDViewer.dir/VMDAnimation.cpp.obj"
+},
+{
+  "directory": "C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/build",
   "command": "C:\\PROGRA~1\\msys64\\ucrt64\\bin\\gcc.exe -DGLFW_DLL @CMakeFiles/MMDViewer.dir/includes_C.rsp -g -o CMakeFiles\\MMDViewer.dir\\glad.c.obj -c C:\\Users\\Crafter\\OneDrive\\Code\\repo\\MMDViewer\\glad.c",
   "file": "C:/Users/Crafter/OneDrive/Code/repo/MMDViewer/glad.c",
   "output": "CMakeFiles/MMDViewer.dir/glad.c.obj"

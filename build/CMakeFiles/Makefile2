@@ -84,12 +84,12 @@ clean: CMakeFiles/MMDViewer.dir/clean
 CMakeFiles/MMDViewer.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:\Users\Crafter\OneDrive\Code\repo\MMDViewer\build\CMakeFiles --progress-num=1,2,3,4,5,6,7 "Built target MMDViewer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:\Users\Crafter\OneDrive\Code\repo\MMDViewer\build\CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Built target MMDViewer"
 .PHONY : CMakeFiles/MMDViewer.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/MMDViewer.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\Crafter\OneDrive\Code\repo\MMDViewer\build\CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\Crafter\OneDrive\Code\repo\MMDViewer\build\CMakeFiles 8
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 CMakeFiles/MMDViewer.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\Crafter\OneDrive\Code\repo\MMDViewer\build\CMakeFiles 0
 .PHONY : CMakeFiles/MMDViewer.dir/rule
@@ -101,7 +101,7 @@ MMDViewer: CMakeFiles/MMDViewer.dir/rule
 # codegen rule for target.
 CMakeFiles/MMDViewer.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\MMDViewer.dir\build.make CMakeFiles/MMDViewer.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:\Users\Crafter\OneDrive\Code\repo\MMDViewer\build\CMakeFiles --progress-num=1,2,3,4,5,6,7 "Finished codegen for target MMDViewer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:\Users\Crafter\OneDrive\Code\repo\MMDViewer\build\CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Finished codegen for target MMDViewer"
 .PHONY : CMakeFiles/MMDViewer.dir/codegen
 
 # clean rule for target.

@@ -2,16 +2,20 @@
 #include "TriMesh.h"
 #include "Camera.h"
 #include "MeshPainter.h"
+#include "VMDAnimation.h"
 
 #include <vector>
 #include <string>
 
 // --- Global Variables ---
 const std::string pmx_path = "models/taffy/taffy.pmx";
+// const std::string vmd_path = "motions/TDA.vmd";
+const std::string vmd_path = "motions/daisukeEvolution.vmd";
 
 Camera* camera = nullptr;
 MeshPainter* painter = nullptr;
 TriMesh* mesh = nullptr;
+VMDAnimation* animation = nullptr;
 
 double brightness = 1.0;
 bool mouseLeftPressed = false, mouseRightPressed = false, mouseMiddlePressed = false;
@@ -19,6 +23,11 @@ bool needsRedraw = true;
 double rotateSensitivity = 0.2, translateSensitivity = 0.02, brightnessSensitivity = 0.01;
 double lastX, lastY;
 glm::vec3 lightPos(0.0f, 50.0f, 50.0f);
+
+// Animation timing
+float lastFrameTime = 0.0f;
+float currentFrame = 0.0f;
+bool isPlaying = true;
 
 // --- Function Declarations ---
 void framebuffer_size_callback(GLFWwindow* w, int width, int height);
@@ -46,6 +55,13 @@ void init() {
     if(last_slash != std::string::npos) base_path = pmx_path.substr(0, last_slash + 1);
     mesh->loadOpenGLTextures(base_path);
 
+    animation = new VMDAnimation();
+    if (!animation->load(vmd_path)) {
+        std::cerr << "Failed to load VMD: " << vmd_path << std::endl;
+    } else {
+        std::cout << "Loaded VMD: " << vmd_path << " (" << animation->getDuration() << " frames)" << std::endl;
+    }
+
     painter->addMesh(mesh, "shaders/vshader.glsl", "shaders/fshader.glsl", "shaders/vshader_edge.glsl", "shaders/fshader_edge.glsl");
 
     glClearColor(0.5f, 0.6f, 0.7f, 1.0f);
@@ -62,6 +78,7 @@ void display() {
 
 // --- Callbacks ---
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) { 
+    if (height == 0) height = 1; // Prevent divide by zero
     glViewport(0, 0, width, height); 
     if (camera) {
         camera->aspect = (float)width / (float)height;
@@ -165,6 +182,7 @@ void cleanUp() {
     if (painter) delete painter;
     if (mesh) delete mesh;
     if (camera) delete camera;
+    if (animation) delete animation;
 }
 
 void reset() {
@@ -209,13 +227,30 @@ int main(int argc, char** argv) {
     init();
     printHelp();
 
+    lastFrameTime = (float)glfwGetTime();
+
     while (!glfwWindowShouldClose(window)) {
+        float currentTime = (float)glfwGetTime();
+        float deltaTime = currentTime - lastFrameTime;
+        lastFrameTime = currentTime;
+
+        if (isPlaying && animation) {
+            // 30 FPS is standard for VMD
+            currentFrame += deltaTime * 30.0f; 
+            if (currentFrame >= animation->getDuration()) {
+                currentFrame = 0.0f; // Loop
+            }
+            animation->update(currentFrame, mesh);
+            mesh->updateBoneMatrices();
+            needsRedraw = true;
+        }
+
         if (needsRedraw) {
             display();
             glfwSwapBuffers(window);
             needsRedraw = false;
         }
-        glfwWaitEvents();
+        glfwPollEvents();
     }
 
     cleanUp();
