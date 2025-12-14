@@ -4,70 +4,69 @@
 #include <glm/gtc/type_ptr.hpp>
 
 MeshPainter::MeshPainter() {}
-MeshPainter::~MeshPainter() { cleanUp(); }
+MeshPainter::~MeshPainter() { clean_up(); }
 
-void MeshPainter::cleanUp() {
+void MeshPainter::clean_up() {
     for (auto& entry : meshes) {
-        glDeleteVertexArrays(1, &entry.mainObject.vao);
-        glDeleteBuffers(1, &entry.mainObject.vbo);
-        glDeleteBuffers(1, &entry.mainObject.ebo);
-        glDeleteProgram(entry.mainObject.program);
+        glDeleteVertexArrays(1, &entry.main_object.vao);
+        glDeleteBuffers(1, &entry.main_object.vbo);
+        glDeleteBuffers(1, &entry.main_object.ebo);
+        glDeleteProgram(entry.main_object.program);
         
-        if (entry.edgeObject.program != 0) {
-            glDeleteProgram(entry.edgeObject.program);
+        if (entry.edge_object.program != 0) {
+            glDeleteProgram(entry.edge_object.program);
         }
         
-        if (entry.mainObject.boneTbo != 0) glDeleteBuffers(1, &entry.mainObject.boneTbo);
-        if (entry.mainObject.boneTexture != 0) glDeleteTextures(1, &entry.mainObject.boneTexture);
+        if (entry.main_object.bone_tbo != 0) glDeleteBuffers(1, &entry.main_object.bone_tbo);
+        if (entry.main_object.bone_texture != 0) glDeleteTextures(1, &entry.main_object.bone_texture);
     }
     meshes.clear();
 }
 
-void MeshPainter::addMesh(TriMesh* mesh, const std::string& vshader, const std::string& fshader, const std::string& vshader_edge, const std::string& fshader_edge) {
+void MeshPainter::add_mesh(TriMesh* mesh, const std::string& vshader, const std::string& fshader, const std::string& vshader_edge, const std::string& fshader_edge) {
     MeshEntry entry;
     entry.mesh = mesh;
     
     // Bind Main Object
-    bindObjectAndData(mesh, entry.mainObject, vshader, fshader, false);
+    bind_object_and_data(mesh, entry.main_object, vshader, fshader, false);
     
     // Cache Uniform Locations for Main Object
-    entry.mainObject.modelLocation = glGetUniformLocation(entry.mainObject.program, "model");
-    entry.mainObject.viewLocation = glGetUniformLocation(entry.mainObject.program, "view");
-    entry.mainObject.projectionLocation = glGetUniformLocation(entry.mainObject.program, "projection");
-    entry.mainObject.objectColorLocation = glGetUniformLocation(entry.mainObject.program, "objectColor");
-    entry.mainObject.lightColorLocation = glGetUniformLocation(entry.mainObject.program, "lightColor");
-    entry.mainObject.lightPosLocation = glGetUniformLocation(entry.mainObject.program, "lightPos");
-    entry.mainObject.viewPosLocation = glGetUniformLocation(entry.mainObject.program, "viewPos");
-    entry.mainObject.brightnessLocation = glGetUniformLocation(entry.mainObject.program, "brightness");
-    entry.mainObject.hasTextureLocation = glGetUniformLocation(entry.mainObject.program, "hasTexture");
-    entry.mainObject.shininessLocation = glGetUniformLocation(entry.mainObject.program, "shininess");
-    entry.mainObject.textureSamplerLocation = glGetUniformLocation(entry.mainObject.program, "textureSampler");
-    entry.mainObject.toonSamplerLocation = glGetUniformLocation(entry.mainObject.program, "toonSampler");
-    entry.mainObject.boneMatricesLocation = glGetUniformLocation(entry.mainObject.program, "boneMatrices");
+    entry.main_object.model_location = glGetUniformLocation(entry.main_object.program, "model");
+    entry.main_object.view_location = glGetUniformLocation(entry.main_object.program, "view");
+    entry.main_object.projection_location = glGetUniformLocation(entry.main_object.program, "projection");
+    entry.main_object.object_color_location = glGetUniformLocation(entry.main_object.program, "objectColor");
+    entry.main_object.light_color_location = glGetUniformLocation(entry.main_object.program, "lightColor");
+    entry.main_object.light_pos_location = glGetUniformLocation(entry.main_object.program, "lightPos");
+    entry.main_object.view_pos_location = glGetUniformLocation(entry.main_object.program, "viewPos");
+    entry.main_object.has_texture_location = glGetUniformLocation(entry.main_object.program, "hasTexture");
+    entry.main_object.shininess_location = glGetUniformLocation(entry.main_object.program, "shininess");
+    entry.main_object.texture_sampler_location = glGetUniformLocation(entry.main_object.program, "textureSampler");
+    entry.main_object.toon_sampler_location = glGetUniformLocation(entry.main_object.program, "toonSampler");
+    entry.main_object.bone_matrices_location = glGetUniformLocation(entry.main_object.program, "boneMatrices");
 
     
-    entry.edgeObject.program = InitShader(vshader_edge.c_str(), fshader_edge.c_str());
-    entry.edgeObject.modelLocation = glGetUniformLocation(entry.edgeObject.program, "model");
-    entry.edgeObject.viewLocation = glGetUniformLocation(entry.edgeObject.program, "view");
-    entry.edgeObject.projectionLocation = glGetUniformLocation(entry.edgeObject.program, "projection");
-    entry.edgeObject.edgeSizeLocation = glGetUniformLocation(entry.edgeObject.program, "edge_size");
-    entry.edgeObject.edgeColorLocation = glGetUniformLocation(entry.edgeObject.program, "edge_color");
-    entry.edgeObject.boneMatricesLocation = glGetUniformLocation(entry.edgeObject.program, "boneMatrices");
+    entry.edge_object.program = InitShader(vshader_edge.c_str(), fshader_edge.c_str());
+    entry.edge_object.model_location = glGetUniformLocation(entry.edge_object.program, "model");
+    entry.edge_object.view_location = glGetUniformLocation(entry.edge_object.program, "view");
+    entry.edge_object.projection_location = glGetUniformLocation(entry.edge_object.program, "projection");
+    entry.edge_object.edge_size_location = glGetUniformLocation(entry.edge_object.program, "edge_size");
+    entry.edge_object.edge_color_location = glGetUniformLocation(entry.edge_object.program, "edge_color");
+    entry.edge_object.bone_matrices_location = glGetUniformLocation(entry.edge_object.program, "boneMatrices");
     
     // We share VAO for edge pass
-    entry.edgeObject.vao = entry.mainObject.vao; 
+    entry.edge_object.vao = entry.main_object.vao; 
 
     meshes.push_back(entry);
 }
 
-void MeshPainter::bindObjectAndData(TriMesh* mesh, OpenGLObject& object, const std::string& vshader, const std::string& fshader, bool isEdge) {
+void MeshPainter::bind_object_and_data(TriMesh* mesh, OpenGLObject& object, const std::string& vshader, const std::string& fshader, bool isEdge) {
     glGenVertexArrays(1, &object.vao);
     glBindVertexArray(object.vao);
     
-    const auto &p = mesh->getVertexPositions();
-    const auto &n = mesh->getVertexNormals();
-    const auto &u = mesh->getVertexUVs();
-    const auto &b = mesh->getVertexBoneData();
+    const auto &p = mesh->get_vertex_positions();
+    const auto &n = mesh->get_vertex_normals();
+    const auto &u = mesh->get_vertex_uvs();
+    const auto &b = mesh->get_vertex_bone_data();
     
     if (p.empty() || p.size() != n.size() || p.size() != u.size() || p.size() != b.size()) { 
         std::cerr << "Vertex attribute mismatch!" << std::endl; 
@@ -89,7 +88,7 @@ void MeshPainter::bindObjectAndData(TriMesh* mesh, OpenGLObject& object, const s
     
     glGenBuffers(1, &object.ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->getFaces().size()*sizeof(vec3u), mesh->getFaces().data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->get_faces().size()*sizeof(vec3u), mesh->get_faces().data(), GL_STATIC_DRAW);
     
     object.program = InitShader(vshader.c_str(), fshader.c_str());
     
@@ -106,22 +105,22 @@ void MeshPainter::bindObjectAndData(TriMesh* mesh, OpenGLObject& object, const s
     glEnableVertexAttribArray(4);
 
     // Initialize TBO for bones
-    glGenBuffers(1, &object.boneTbo);
-    glBindBuffer(GL_TEXTURE_BUFFER, object.boneTbo);
-    glGenTextures(1, &object.boneTexture);
+    glGenBuffers(1, &object.bone_tbo);
+    glBindBuffer(GL_TEXTURE_BUFFER, object.bone_tbo);
+    glGenTextures(1, &object.bone_texture);
 }
 
-void MeshPainter::drawMeshes(Camera* camera, const glm::vec3& lightPos, float brightness) {
-    glm::mat4 view = camera->getViewMatrix();
-    glm::mat4 projection = camera->getProjectionMatrix();
+void MeshPainter::draw_meshes(Camera* camera, const glm::vec3& lightPos) {
+    glm::mat4 view = camera->get_view_matrix();
+    glm::mat4 projection = camera->get_projection_matrix();
     glm::vec3 viewPos = camera->position;
 
     for (const auto& entry : meshes) {
-        glm::mat4 model = entry.mesh->getModelMatrix();
+        glm::mat4 model = entry.mesh->get_model_matrix();
         
         // Prepare bone matrices
         std::vector<glm::mat4> boneTransforms;
-        auto& bones = entry.mesh->getBones();
+        auto& bones = entry.mesh->get_bones();
         if (!bones.empty()) {
             boneTransforms.reserve(bones.size());
             for (const auto& bone : bones) {
@@ -129,76 +128,75 @@ void MeshPainter::drawMeshes(Camera* camera, const glm::vec3& lightPos, float br
             }
         }
 
-        glBindVertexArray(entry.mainObject.vao);
+        glBindVertexArray(entry.main_object.vao);
 
         // Pass 1: Outline
         glEnable(GL_CULL_FACE);
         glCullFace(GL_FRONT);
-        glUseProgram(entry.edgeObject.program);
+        glUseProgram(entry.edge_object.program);
         
         if (!boneTransforms.empty()) {
              // Update TBO
-             glBindBuffer(GL_TEXTURE_BUFFER, entry.mainObject.boneTbo);
+             glBindBuffer(GL_TEXTURE_BUFFER, entry.main_object.bone_tbo);
              glBufferData(GL_TEXTURE_BUFFER, boneTransforms.size() * sizeof(glm::mat4), boneTransforms.data(), GL_DYNAMIC_DRAW);
              
              // Bind TBO to Texture Unit 2
              glActiveTexture(GL_TEXTURE2);
-             glBindTexture(GL_TEXTURE_BUFFER, entry.mainObject.boneTexture);
-             glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, entry.mainObject.boneTbo);
+             glBindTexture(GL_TEXTURE_BUFFER, entry.main_object.bone_texture);
+             glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, entry.main_object.bone_tbo);
              
-             glUniform1i(entry.edgeObject.boneMatricesLocation, 2);
+             glUniform1i(entry.edge_object.bone_matrices_location, 2);
         }
         
-        glUniformMatrix4fv(entry.edgeObject.modelLocation, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(entry.edgeObject.viewLocation, 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(entry.edgeObject.projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(entry.edge_object.model_location, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(entry.edge_object.view_location, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(entry.edge_object.projection_location, 1, GL_FALSE, glm::value_ptr(projection));
         
         unsigned int face_offset = 0;
-        for (const auto& mat : entry.mesh->getMaterials()) {
-            glUniform1f(entry.edgeObject.edgeSizeLocation, mat.edge_size * 0.03f);
-            glUniform4fv(entry.edgeObject.edgeColorLocation, 1, glm::value_ptr(mat.edge_color));
+        for (const auto& mat : entry.mesh->get_materials()) {
+            glUniform1f(entry.edge_object.edge_size_location, mat.edge_size * 0.03f);
+            glUniform4fv(entry.edge_object.edge_color_location, 1, glm::value_ptr(mat.edge_color));
             glDrawElements(GL_TRIANGLES, mat.num_faces, GL_UNSIGNED_INT, (void*)(face_offset*sizeof(unsigned int)));
             face_offset += mat.num_faces;
         }
 
         // Pass 2: Main Model
         glCullFace(GL_BACK);
-        glUseProgram(entry.mainObject.program);
+        glUseProgram(entry.main_object.program);
         
         if (!boneTransforms.empty()) {
              // Bind TBO to Texture Unit 2 (already updated)
              glActiveTexture(GL_TEXTURE2);
-             glBindTexture(GL_TEXTURE_BUFFER, entry.mainObject.boneTexture);
+             glBindTexture(GL_TEXTURE_BUFFER, entry.main_object.bone_texture);
              // glTexBuffer is associated with the texture object, so binding the texture is enough if we didn't change the buffer association
              // But to be safe/clear:
              // glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, entry.mainObject.boneTbo); 
              
-             glUniform1i(entry.mainObject.boneMatricesLocation, 2);
+             glUniform1i(entry.main_object.bone_matrices_location, 2);
         }
         
-        glUniformMatrix4fv(entry.mainObject.modelLocation, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(entry.mainObject.viewLocation, 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(entry.mainObject.projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(entry.main_object.model_location, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(entry.main_object.view_location, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(entry.main_object.projection_location, 1, GL_FALSE, glm::value_ptr(projection));
         
-        glUniform3fv(entry.mainObject.lightColorLocation, 1, glm::value_ptr(glm::vec3(1.0f)));
-        glUniform3fv(entry.mainObject.lightPosLocation, 1, glm::value_ptr(lightPos));
-        glUniform3fv(entry.mainObject.viewPosLocation, 1, glm::value_ptr(viewPos));
-        glUniform1f(entry.mainObject.brightnessLocation, brightness);
+        glUniform3fv(entry.main_object.light_color_location, 1, glm::value_ptr(glm::vec3(1.0f)));
+        glUniform3fv(entry.main_object.light_pos_location, 1, glm::value_ptr(lightPos));
+        glUniform3fv(entry.main_object.view_pos_location, 1, glm::value_ptr(viewPos));
         
-        glUniform1i(entry.mainObject.textureSamplerLocation, 0);
-        glUniform1i(entry.mainObject.toonSamplerLocation, 1);
+        glUniform1i(entry.main_object.texture_sampler_location, 0);
+        glUniform1i(entry.main_object.toon_sampler_location, 1);
         
         face_offset = 0;
-        for (const auto& mat : entry.mesh->getMaterials()) {
-            glUniform4fv(entry.mainObject.objectColorLocation, 1, glm::value_ptr(mat.diffuse_color));
-            glUniform1f(entry.mainObject.shininessLocation, mat.shininess);
+        for (const auto& mat : entry.mesh->get_materials()) {
+            glUniform4fv(entry.main_object.object_color_location, 1, glm::value_ptr(mat.diffuse_color));
+            glUniform1f(entry.main_object.shininess_location, mat.shininess);
             
             if (mat.has_texture) {
-                glUniform1i(entry.mainObject.hasTextureLocation, 1);
+                glUniform1i(entry.main_object.has_texture_location, 1);
                 glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, entry.mesh->getTextures()[mat.texture_index].gl_texture_id);
+                glBindTexture(GL_TEXTURE_2D, entry.mesh->get_textures()[mat.texture_index].gl_texture_id);
             } else {
-                glUniform1i(entry.mainObject.hasTextureLocation, 0);
+                glUniform1i(entry.main_object.has_texture_location, 0);
             }
             
             glDrawElements(GL_TRIANGLES, mat.num_faces, GL_UNSIGNED_INT, (void*)(face_offset*sizeof(unsigned int)));

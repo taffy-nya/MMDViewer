@@ -26,7 +26,7 @@ public:
 
     bool load(const std::string& filename);
     void update(float frame, TriMesh* mesh);
-    float getDuration() const { return duration; }
+    float get_duration() const { return duration; }
 
 private:
     std::map<std::string, AnimationTrack> tracks;

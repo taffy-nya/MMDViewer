@@ -9,44 +9,44 @@ public:
     Camera();
     ~Camera();
 
-    glm::mat4 getViewMatrix();
-    glm::mat4 getProjectionMatrix();
+    glm::mat4 get_view_matrix();
+    glm::mat4 get_projection_matrix();
 
-    void updateCamera();
+    void update_camera();
     void reset();
 
     // Interaction methods
-    void handleMouseDrag(double deltaX, double deltaY, bool leftButton, bool rightButton, bool middleButton);
-    void handleScroll(double yoffset);
-    void handleKeys(int key, int action);
-    void updateCameraVectors();
+    void handle_mouse_drag(double deltaX, double deltaY, bool leftButton, bool rightButton, bool middleButton);
+    void handle_scroll(double yoffset);
+    void handle_keys(int key, int action);
+    void update_camera_vectors();
 
     // Camera parameters
     glm::vec3 position;
     glm::vec3 front;
     glm::vec3 up;
     glm::vec3 right;
-    glm::vec3 worldUp;
+    glm::vec3 world_up;
 
     // Euler Angles
     float yaw;
     float pitch;
 
     // Camera options
-    float movementSpeed;
-    float mouseSensitivity;
+    float movement_speed;
+    float mouse_sensitivity;
     float zoom;
 
     // Orbit/Model control (keeping the style of the original MMDViewer)
-    glm::vec3 rotateTheta;
-    glm::vec3 translateTheta;
-    glm::vec3 scaleTheta;
+    glm::vec3 rotate_theta;
+    glm::vec3 translate_theta;
+    glm::vec3 scale_theta;
     
     // Projection parameters
     float fov;
     float aspect;
-    float zNear;
-    float zFar;
+    float z_near;
+    float z_far;
 
 };
 #endif

@@ -89,34 +89,34 @@ public:
     TriMesh();
     ~TriMesh();
 
-    void readPmx(const std::string& filename);
-    void loadOpenGLTextures(const std::string& modelBasePath);
-    void cleanData();
+    void read_pmx(const std::string& filename);
+    void load_opengl_textures(const std::string& modelBasePath);
+    void clean_data();
 
     // Transformation methods
-    void setTranslation(const glm::vec3& t) { translation = t; }
-    void setRotation(const glm::vec3& r) { rotation = r; }
-    void setScale(const glm::vec3& s) { scale = s; }
+    void set_translation(const glm::vec3& t) { translation = t; }
+    void set_rotation(const glm::vec3& r) { rotation = r; }
+    void set_scale(const glm::vec3& s) { scale = s; }
     
-    glm::vec3 getTranslation() const { return translation; }
-    glm::vec3 getRotation() const { return rotation; }
-    glm::vec3 getScale() const { return scale; }
+    glm::vec3 get_translation() const { return translation; }
+    glm::vec3 get_rotation() const { return rotation; }
+    glm::vec3 get_scale() const { return scale; }
 
-    glm::mat4 getModelMatrix();
+    glm::mat4 get_model_matrix();
 
     // Getter functions
-    const std::vector<glm::vec3>& getVertexPositions() const { return vertex_positions; }
-    const std::vector<glm::vec3>& getVertexNormals() const { return vertex_normals; }
-    const std::vector<glm::vec2>& getVertexUVs() const { return vertex_uvs; }
-    const std::vector<VertexBoneData>& getVertexBoneData() const { return vertex_bone_data; }
-    const std::vector<vec3u>& getFaces() const { return faces; }
-    const std::vector<MaterialInfo>& getMaterials() const { return materials; }
-    std::vector<TextureInfo>& getTextures() { return textures; }
+    const std::vector<glm::vec3>& get_vertex_positions() const { return vertex_positions; }
+    const std::vector<glm::vec3>& get_vertex_normals() const { return vertex_normals; }
+    const std::vector<glm::vec2>& get_vertex_uvs() const { return vertex_uvs; }
+    const std::vector<VertexBoneData>& get_vertex_bone_data() const { return vertex_bone_data; }
+    const std::vector<vec3u>& get_faces() const { return faces; }
+    const std::vector<MaterialInfo>& get_materials() const { return materials; }
+    std::vector<TextureInfo>& get_textures() { return textures; }
     
-    std::vector<PMXBone>& getBones() { return bones; }
-    const std::map<std::string, int>& getBoneMapping() const { return bone_mapping; }
+    std::vector<PMXBone>& get_bones() { return bones; }
+    const std::map<std::string, int>& get_bone_mapping() const { return bone_mapping; }
 
-    void updateBoneMatrices();
+    void update_bone_matrices();
 
 private:
     std::vector<glm::vec3> vertex_positions;

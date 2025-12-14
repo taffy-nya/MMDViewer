@@ -4,6 +4,9 @@
         // "cpp": "cmake --build build && ./build/MMDViewer"
         "cpp": "./build/MMDViewer"
     },
+    "taffycode.compileCommands": {
+        "cpp": "cmake --build build"
+    },
     "C_Cpp.default.compilerPath": "C:/Program Files/msys64/ucrt64/bin/g++.exe",
     // "files.associations": {
     //     "*.glsl": "cpp"

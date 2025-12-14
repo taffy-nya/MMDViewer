@@ -9,7 +9,6 @@ uniform vec4 objectColor;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
 uniform vec3 viewPos;
-uniform float brightness;
 
 uniform sampler2D textureSampler;
 uniform bool hasTexture;
@@ -23,5 +22,5 @@ void main()
     }
     // 只使用物体颜色和贴图，不做任何光照
     vec4 finalColor = objectColor * textureColor;
-    fColor = vec4(finalColor.rgb * brightness, finalColor.a);
+    fColor = vec4(finalColor.rgb, finalColor.a);
 }

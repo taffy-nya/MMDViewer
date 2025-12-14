@@ -19,7 +19,7 @@
 #include <cstring>
 
 // --- Helper Functions ---
-unsigned int ReadIndex(std::ifstream& file, int size) {
+unsigned int read_index(std::ifstream& file, int size) {
     unsigned int index = 0; char buffer[4]; file.read(buffer, size); if (!file) return -1;
     switch (size) {
         case 1: index = *reinterpret_cast<unsigned char*>(buffer); break;
@@ -30,7 +30,7 @@ unsigned int ReadIndex(std::ifstream& file, int size) {
     return index;
 }
 
-std::string readPmxString(std::ifstream& file, int text_encoding) {
+std::string read_pmx_string(std::ifstream& file, int text_encoding) {
     int string_length; file.read(reinterpret_cast<char*>(&string_length), 4);
     if (!file || string_length <= 0) return "";
     std::vector<char> buffer(string_length); file.read(buffer.data(), string_length);
@@ -47,18 +47,18 @@ std::string readPmxString(std::ifstream& file, int text_encoding) {
     }
 }
 
-void skipPmxString(std::ifstream& file) {
+void skip_pmx_string(std::ifstream& file) {
     int string_length; file.read(reinterpret_cast<char*>(&string_length), 4);
     if (file && string_length > 0) file.seekg(string_length, std::ios_base::cur);
 }
 
 // --- TriMesh Class Implementation ---
 TriMesh::TriMesh() {}
-TriMesh::~TriMesh() { cleanData(); }
-void TriMesh::cleanData() { vertex_positions.clear(); vertex_normals.clear(); vertex_uvs.clear(); vertex_bone_data.clear(); faces.clear(); materials.clear(); textures.clear(); bones.clear(); bone_mapping.clear(); }
+TriMesh::~TriMesh() { clean_data(); }
+void TriMesh::clean_data() { vertex_positions.clear(); vertex_normals.clear(); vertex_uvs.clear(); vertex_bone_data.clear(); faces.clear(); materials.clear(); textures.clear(); bones.clear(); bone_mapping.clear(); }
 
-void TriMesh::readPmx(const std::string& filename) {
-    cleanData();
+void TriMesh::read_pmx(const std::string& filename) {
+    clean_data();
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) { return; }
 
@@ -69,7 +69,7 @@ void TriMesh::readPmx(const std::string& filename) {
     unsigned char g_info[8]; file.read(reinterpret_cast<char*>(g_info), global_info_size);
     unsigned char text_encoding = g_info[0], uv_size = g_info[1], vertex_index_size = g_info[2], texture_index_size = g_info[3],
                   material_index_size = g_info[4], bone_index_size = g_info[5], morph_index_size = g_info[6], rigid_body_index_size = g_info[7];
-    skipPmxString(file); skipPmxString(file); skipPmxString(file); skipPmxString(file);
+    skip_pmx_string(file); skip_pmx_string(file); skip_pmx_string(file); skip_pmx_string(file);
 
     // --- Vertices ---
     int num_vertices; file.read(reinterpret_cast<char*>(&num_vertices), 4);
@@ -91,15 +91,15 @@ void TriMesh::readPmx(const std::string& filename) {
         switch (weight_type) {
             case 0: // BDEF1
             {
-                int b1 = ReadIndex(file, bone_index_size);
+                int b1 = read_index(file, bone_index_size);
                 boneData.bone_indices[0] = b1;
                 boneData.bone_weights[0] = 1.0f;
                 break;
             }
             case 1: // BDEF2
             {
-                int b1 = ReadIndex(file, bone_index_size);
-                int b2 = ReadIndex(file, bone_index_size);
+                int b1 = read_index(file, bone_index_size);
+                int b2 = read_index(file, bone_index_size);
                 float w1; file.read(reinterpret_cast<char*>(&w1), 4);
                 boneData.bone_indices[0] = b1;
                 boneData.bone_indices[1] = b2;
@@ -109,10 +109,10 @@ void TriMesh::readPmx(const std::string& filename) {
             }
             case 2: // BDEF4
             {
-                int b1 = ReadIndex(file, bone_index_size);
-                int b2 = ReadIndex(file, bone_index_size);
-                int b3 = ReadIndex(file, bone_index_size);
-                int b4 = ReadIndex(file, bone_index_size);
+                int b1 = read_index(file, bone_index_size);
+                int b2 = read_index(file, bone_index_size);
+                int b3 = read_index(file, bone_index_size);
+                int b4 = read_index(file, bone_index_size);
                 float w1, w2, w3, w4;
                 file.read(reinterpret_cast<char*>(&w1), 4);
                 file.read(reinterpret_cast<char*>(&w2), 4);
@@ -130,8 +130,8 @@ void TriMesh::readPmx(const std::string& filename) {
             }
             case 3: // SDEF
             {
-                int b1 = ReadIndex(file, bone_index_size);
-                int b2 = ReadIndex(file, bone_index_size);
+                int b1 = read_index(file, bone_index_size);
+                int b2 = read_index(file, bone_index_size);
                 float w1; file.read(reinterpret_cast<char*>(&w1), 4);
                 file.seekg(36, std::ios::cur); // Skip C, R0, R1
                 boneData.bone_indices[0] = b1;
@@ -142,10 +142,10 @@ void TriMesh::readPmx(const std::string& filename) {
             }
             case 4: // QDEF
             {
-                int b1 = ReadIndex(file, bone_index_size);
-                int b2 = ReadIndex(file, bone_index_size);
-                int b3 = ReadIndex(file, bone_index_size);
-                int b4 = ReadIndex(file, bone_index_size);
+                int b1 = read_index(file, bone_index_size);
+                int b2 = read_index(file, bone_index_size);
+                int b3 = read_index(file, bone_index_size);
+                int b4 = read_index(file, bone_index_size);
                 float w1, w2, w3, w4;
                 file.read(reinterpret_cast<char*>(&w1), 4);
                 file.read(reinterpret_cast<char*>(&w2), 4);
@@ -170,9 +170,9 @@ void TriMesh::readPmx(const std::string& filename) {
     int num_face_indices; file.read(reinterpret_cast<char*>(&num_face_indices), 4);
     faces.reserve(num_face_indices / 3);
     for (int i = 0; i < num_face_indices / 3; ++i) {
-        unsigned int v1 = ReadIndex(file, vertex_index_size);
-        unsigned int v2 = ReadIndex(file, vertex_index_size);
-        unsigned int v3 = ReadIndex(file, vertex_index_size);
+        unsigned int v1 = read_index(file, vertex_index_size);
+        unsigned int v2 = read_index(file, vertex_index_size);
+        unsigned int v3 = read_index(file, vertex_index_size);
         faces.emplace_back(v1, v3, v2); // Swap v2 and v3 for coordinate system
     }
 
@@ -180,7 +180,7 @@ void TriMesh::readPmx(const std::string& filename) {
     int num_textures; file.read(reinterpret_cast<char*>(&num_textures), 4);
     textures.reserve(num_textures);
     for (int i = 0; i < num_textures; ++i) {
-        textures.push_back({readPmxString(file, text_encoding)});
+        textures.push_back({read_pmx_string(file, text_encoding)});
     }
 
     // --- Materials ---
@@ -188,7 +188,7 @@ void TriMesh::readPmx(const std::string& filename) {
     materials.reserve(num_materials);
     for (int i = 0; i < num_materials; ++i) {
         MaterialInfo mat;
-        skipPmxString(file); skipPmxString(file);
+        skip_pmx_string(file); skip_pmx_string(file);
         file.read(reinterpret_cast<char*>(&mat.diffuse_color), 16);
         file.read(reinterpret_cast<char*>(&mat.specular_color), 12);
         file.read(reinterpret_cast<char*>(&mat.shininess), 4);
@@ -196,13 +196,13 @@ void TriMesh::readPmx(const std::string& filename) {
         unsigned char draw_flags; file.read(reinterpret_cast<char*>(&draw_flags), 1);
         file.read(reinterpret_cast<char*>(&mat.edge_color), 16);
         file.read(reinterpret_cast<char*>(&mat.edge_size), 4);
-        mat.texture_index = ReadIndex(file, texture_index_size);
+        mat.texture_index = read_index(file, texture_index_size);
         mat.has_texture = (mat.texture_index != -1);
         file.seekg(texture_index_size + 1, std::ios::cur);
         unsigned char toon_ref_type; file.read(reinterpret_cast<char*>(&toon_ref_type), 1);
-        if (toon_ref_type == 0) { mat.toon_texture_index = ReadIndex(file, texture_index_size); }
+        if (toon_ref_type == 0) { mat.toon_texture_index = read_index(file, texture_index_size); }
         else { unsigned char internal_index; file.read(reinterpret_cast<char*>(&internal_index), 1); mat.toon_texture_index = internal_index; }
-        skipPmxString(file);
+        skip_pmx_string(file);
         file.read(reinterpret_cast<char*>(&mat.num_faces), 4);
         materials.push_back(mat);
     }
@@ -213,24 +213,24 @@ void TriMesh::readPmx(const std::string& filename) {
     
     for(int i=0; i<num_bones; ++i) {
         PMXBone& bone = bones[i];
-        bone.name = readPmxString(file, text_encoding);
+        bone.name = read_pmx_string(file, text_encoding);
         bone_mapping[bone.name] = i;
-        skipPmxString(file); // English name
+        skip_pmx_string(file); // English name
         file.read(reinterpret_cast<char*>(&bone.position), 12);
         bone.position.z = -bone.position.z; // Coordinate fix
-        bone.parent_index = ReadIndex(file, bone_index_size);
+        bone.parent_index = read_index(file, bone_index_size);
         int transform_level; file.read(reinterpret_cast<char*>(&transform_level), 4);
         unsigned short flags; file.read(reinterpret_cast<char*>(&flags), 2);
         bone.flags = flags;
         
         if (flags & 0x0001) { // Connection: 1 = Bone Index, 0 = Offset
-            ReadIndex(file, bone_index_size);
+            read_index(file, bone_index_size);
         } else {
             file.seekg(12, std::ios::cur);
         }
         
         if (flags & 0x0100 || flags & 0x0200) { // Rotation/Translation Append
-             bone.inherit_parent_index = ReadIndex(file, bone_index_size);
+             bone.inherit_parent_index = read_index(file, bone_index_size);
              file.read(reinterpret_cast<char*>(&bone.inherit_influence), 4);
         }
         
@@ -247,13 +247,13 @@ void TriMesh::readPmx(const std::string& filename) {
         }
 
         if (flags & 0x0020) { // IK
-            bone.ik_target_index = ReadIndex(file, bone_index_size);
+            bone.ik_target_index = read_index(file, bone_index_size);
             file.read(reinterpret_cast<char*>(&bone.ik_loop_count), 4);
             file.read(reinterpret_cast<char*>(&bone.ik_limit_angle), 4);
             int link_count; file.read(reinterpret_cast<char*>(&link_count), 4);
             bone.ik_links.resize(link_count);
             for(int j=0; j<link_count; ++j) {
-                bone.ik_links[j].bone_index = ReadIndex(file, bone_index_size);
+                bone.ik_links[j].bone_index = read_index(file, bone_index_size);
                 unsigned char has_limits; file.read(reinterpret_cast<char*>(&has_limits), 1);
                 bone.ik_links[j].has_limits = (has_limits != 0);
                 if(has_limits) {
@@ -271,7 +271,7 @@ void TriMesh::readPmx(const std::string& filename) {
 }
 
 // Helper to update a single bone's global transform
-void UpdateGlobalTransform(std::vector<PMXBone>& bones, int index) {
+void update_global_transform(std::vector<PMXBone>& bones, int index) {
     PMXBone& bone = bones[index];
     glm::vec3 parentPos = glm::vec3(0.0f);
     glm::mat4 parentGlobal = glm::mat4(1.0f);
@@ -309,7 +309,7 @@ void UpdateGlobalTransform(std::vector<PMXBone>& bones, int index) {
     bone.global_transform = parentGlobal * local;
 }
 
-void SolveIK(std::vector<PMXBone>& bones, int ikBoneIndex) {
+void solve_ik(std::vector<PMXBone>& bones, int ikBoneIndex) {
     PMXBone& ikBone = bones[ikBoneIndex];
     if (ikBone.ik_target_index == -1) return;
 
@@ -403,11 +403,11 @@ void SolveIK(std::vector<PMXBone>& bones, int ikBoneIndex) {
             }
             
             // Update chain
-            UpdateGlobalTransform(bones, link.bone_index);
+            update_global_transform(bones, link.bone_index);
             for (int k = i - 1; k >= 0; --k) {
-                 UpdateGlobalTransform(bones, ikBone.ik_links[k].bone_index);
+                 update_global_transform(bones, ikBone.ik_links[k].bone_index);
             }
-            UpdateGlobalTransform(bones, ikBone.ik_target_index);
+            update_global_transform(bones, ikBone.ik_target_index);
             
             converged = false;
         }
@@ -416,22 +416,22 @@ void SolveIK(std::vector<PMXBone>& bones, int ikBoneIndex) {
     }
 }
 
-void TriMesh::updateBoneMatrices() {
+void TriMesh::update_bone_matrices() {
     // 1. Reset / FK Pass
     for (int i = 0; i < bones.size(); ++i) {
-        UpdateGlobalTransform(bones, i);
+        update_global_transform(bones, i);
     }
     
     // 2. IK Pass
     for (int i = 0; i < bones.size(); ++i) {
         if (bones[i].ik_target_index != -1) {
-            SolveIK(bones, i);
+            solve_ik(bones, i);
         }
     }
 }
 
 
-void TriMesh::loadOpenGLTextures(const std::string& modelBasePath) {
+void TriMesh::load_opengl_textures(const std::string& modelBasePath) {
     stbi_set_flip_vertically_on_load(true);
     for (auto& texInfo : textures) {
         if (texInfo.path.empty()) continue;
@@ -458,7 +458,7 @@ void TriMesh::loadOpenGLTextures(const std::string& modelBasePath) {
     }
 }
 
-glm::mat4 TriMesh::getModelMatrix() {
+glm::mat4 TriMesh::get_model_matrix() {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, translation);
     model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));

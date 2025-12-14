@@ -4,30 +4,56 @@
 #include "MeshPainter.h"
 #include "VMDAnimation.h"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include <vector>
 #include <string>
 
+#ifdef _WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+#include <windows.h>
+#include <commdlg.h>
+
+std::string open_file_dialog(const char* filter, GLFWwindow* window) {
+    OPENFILENAMEA ofn;
+    char fileName[MAX_PATH] = "";
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = glfwGetWin32Window(window);
+    ofn.lpstrFilter = filter;
+    ofn.lpstrFile = fileName;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+    ofn.lpstrDefExt = "";
+    
+    if (GetOpenFileNameA(&ofn))
+        return std::string(fileName);
+    return "";
+}
+#endif
+
 // --- Global Variables ---
-const std::string pmx_path = "models/taffy/taffy.pmx";
-const std::string vmd_path = "motions/TDA.vmd";
-// const std::string vmd_path = "motions/maodie.vmd";
+char pmx_path_buf[256] = "models/taffy/taffy.pmx";
+char vmd_path_buf[256] = "motions/TDA.vmd";
 
 Camera* camera = nullptr;
 MeshPainter* painter = nullptr;
 TriMesh* mesh = nullptr;
 VMDAnimation* animation = nullptr;
 
-double brightness = 1.0;
-bool mouseLeftPressed = false, mouseRightPressed = false, mouseMiddlePressed = false;
-bool needsRedraw = true;
-double rotateSensitivity = 0.2, translateSensitivity = 0.02, brightnessSensitivity = 0.01;
-double lastX, lastY;
-glm::vec3 lightPos(0.0f, 50.0f, 50.0f);
+bool mouse_left_pressed = false, mouse_right_pressed = false, mouse_middle_pressed = false;
+bool needs_redraw = true;
+double rotate_sensitivity = 0.2, translate_sensitivity = 0.02;
+double last_x, last_y;
+glm::vec3 light_pos(0.0f, 50.0f, 50.0f);
 
 // Animation timing
-float lastFrameTime = 0.0f;
-float currentFrame = 0.0f;
-bool isPlaying = true;
+float last_frame_time = 0.0f;
+float current_frame = 0.0f;
+bool is_playing = true;
 
 // --- Function Declarations ---
 void framebuffer_size_callback(GLFWwindow* w, int width, int height);
@@ -37,32 +63,19 @@ void cursor_position_callback(GLFWwindow* w, double x, double y);
 void scroll_callback(GLFWwindow* w, double x, double y);
 void init();
 void display();
-void cleanUp();
+void clean_up();
 void reset();
-void printHelp();
+void print_help();
+void load_model(const std::string& path);
+void load_motion(const std::string& path);
 
 // --- Initialization ---
 void init() {
     camera = new Camera();
     painter = new MeshPainter();
-    mesh = new TriMesh();
-
-    mesh->readPmx(pmx_path);
     
-    std::string base_path = "";
-    size_t last_slash = pmx_path.rfind('/');
-    if(last_slash == std::string::npos) last_slash = pmx_path.rfind('\\');
-    if(last_slash != std::string::npos) base_path = pmx_path.substr(0, last_slash + 1);
-    mesh->loadOpenGLTextures(base_path);
-
-    animation = new VMDAnimation();
-    if (!animation->load(vmd_path)) {
-        std::cerr << "Failed to load VMD: " << vmd_path << std::endl;
-    } else {
-        std::cout << "Loaded VMD: " << vmd_path << " (" << animation->getDuration() << " frames)" << std::endl;
-    }
-
-    painter->addMesh(mesh, "shaders/vshader.glsl", "shaders/fshader.glsl", "shaders/vshader_edge.glsl", "shaders/fshader_edge.glsl");
+    load_model(pmx_path_buf);
+    load_motion(vmd_path_buf);
 
     glClearColor(0.5f, 0.6f, 0.7f, 1.0f);
     glEnable(GL_DEPTH_TEST);
@@ -70,10 +83,47 @@ void init() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+void load_model(const std::string& path) {
+    if (mesh) {
+        delete mesh;
+        mesh = nullptr;
+    }
+    // Re-create painter to clear old mesh data
+    if (painter) {
+        delete painter;
+        painter = new MeshPainter();
+    }
+
+    mesh = new TriMesh();
+    mesh->read_pmx(path);
+    
+    std::string base_path = "";
+    size_t last_slash = path.rfind('/');
+    if(last_slash == std::string::npos) last_slash = path.rfind('\\');
+    if(last_slash != std::string::npos) base_path = path.substr(0, last_slash + 1);
+    mesh->load_opengl_textures(base_path);
+
+    painter->add_mesh(mesh, "shaders/vshader.glsl", "shaders/fshader.glsl", "shaders/vshader_edge.glsl", "shaders/fshader_edge.glsl");
+}
+
+void load_motion(const std::string& path) {
+    if (animation) {
+        delete animation;
+    }
+    animation = new VMDAnimation();
+    if (!animation->load(path)) {
+        std::cerr << "Failed to load VMD: " << path << std::endl;
+    } else {
+        std::cout << "Loaded VMD: " << path << " (" << animation->get_duration() << " frames)" << std::endl;
+    }
+    current_frame = 0.0f;
+}
+
+
 // --- Render Loop ---
 void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    painter->drawMeshes(camera, lightPos, (float)brightness);
+    painter->draw_meshes(camera, light_pos);
 }
 
 // --- Callbacks ---
@@ -82,73 +132,68 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height); 
     if (camera) {
         camera->aspect = (float)width / (float)height;
-        camera->updateCameraVectors(); // Re-calculate projection if needed, though aspect is used in getProjectionMatrix
+        camera->update_camera_vectors(); // Re-calculate projection if needed, though aspect is used in getProjectionMatrix
     }
-    needsRedraw = true; 
+    needs_redraw = true; 
 }
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
-    double deltaX = xpos - lastX;
-    double deltaY = ypos - lastY;
+    double deltaX = xpos - last_x;
+    double deltaY = ypos - last_y;
     
-    if (mouseLeftPressed) { 
-        glm::vec3 rot = mesh->getRotation();
-        rot.y += deltaX * rotateSensitivity; 
-        rot.x += deltaY * rotateSensitivity; 
-        mesh->setRotation(rot);
-        needsRedraw = true; 
+    if (mouse_left_pressed) { 
+        glm::vec3 rot = mesh->get_rotation();
+        rot.y += deltaX * rotate_sensitivity; 
+        rot.x += deltaY * rotate_sensitivity; 
+        mesh->set_rotation(rot);
+        needs_redraw = true; 
     }
-    if (mouseRightPressed) { 
-        glm::vec3 trans = mesh->getTranslation();
-        trans.x += deltaX * translateSensitivity; 
-        trans.y -= deltaY * translateSensitivity; 
-        mesh->setTranslation(trans);
-        needsRedraw = true; 
+    if (mouse_right_pressed) { 
+        glm::vec3 trans = mesh->get_translation();
+        trans.x += deltaX * translate_sensitivity; 
+        trans.y -= deltaY * translate_sensitivity; 
+        mesh->set_translation(trans);
+        needs_redraw = true; 
     }
-    if (mouseMiddlePressed) { 
-        brightness -= deltaY * brightnessSensitivity; 
-        brightness = glm::clamp(brightness, 0.0, 10.0); 
-        needsRedraw = true; 
-    }
-    lastX = xpos; lastY = ypos;
+    last_x = xpos; last_y = ypos;
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     if (action == GLFW_PRESS) {
-        glfwGetCursorPos(window, &lastX, &lastY);
-        if (button == GLFW_MOUSE_BUTTON_LEFT) mouseLeftPressed = true;
-        if (button == GLFW_MOUSE_BUTTON_RIGHT) mouseRightPressed = true;
-        if (button == GLFW_MOUSE_BUTTON_MIDDLE) mouseMiddlePressed = true;
+        glfwGetCursorPos(window, &last_x, &last_y);
+        if (button == GLFW_MOUSE_BUTTON_LEFT) mouse_left_pressed = true;
+        if (button == GLFW_MOUSE_BUTTON_RIGHT) mouse_right_pressed = true;
+        if (button == GLFW_MOUSE_BUTTON_MIDDLE) mouse_middle_pressed = true;
     } else if (action == GLFW_RELEASE) {
-        if (button == GLFW_MOUSE_BUTTON_LEFT) mouseLeftPressed = false;
-        if (button == GLFW_MOUSE_BUTTON_RIGHT) mouseRightPressed = false;
-        if (button == GLFW_MOUSE_BUTTON_MIDDLE) mouseMiddlePressed = false;
+        if (button == GLFW_MOUSE_BUTTON_LEFT) mouse_left_pressed = false;
+        if (button == GLFW_MOUSE_BUTTON_RIGHT) mouse_right_pressed = false;
+        if (button == GLFW_MOUSE_BUTTON_MIDDLE) mouse_middle_pressed = false;
     }
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     if (camera) {
-        camera->handleScroll(yoffset);
-        needsRedraw = true;
+        camera->handle_scroll(yoffset);
+        needs_redraw = true;
     }
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
         bool changed = true;
-        if (camera) camera->handleKeys(key, action);
+        if (camera) camera->handle_keys(key, action);
         
         switch (key) {
             case GLFW_KEY_Q: {
-                glm::vec3 rot = mesh->getRotation();
+                glm::vec3 rot = mesh->get_rotation();
                 rot.z += 5.0f;
-                mesh->setRotation(rot);
+                mesh->set_rotation(rot);
                 break;
             }
             case GLFW_KEY_E: {
-                glm::vec3 rot = mesh->getRotation();
+                glm::vec3 rot = mesh->get_rotation();
                 rot.z -= 5.0f;
-                mesh->setRotation(rot);
+                mesh->set_rotation(rot);
                 break;
             }
             case GLFW_KEY_1: glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); break;
@@ -157,16 +202,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GL_TRUE); break;
             default: changed = false; break;
         }
-        if (changed) needsRedraw = true;
+        if (changed) needs_redraw = true;
     }
 }
 
-void printHelp() {
+void print_help() {
     printf("--- MMD Model Viewer Controls ---\n");
     printf("Mouse:\n");
     printf("  Left Drag:   Rotate model\n");
     printf("  Right Drag:  Translate model\n");
-    printf("  Middle Drag: Adjust brightness\n");
     printf("  Scroll:      Zoom in/out\n\n");
     printf("Keyboard:\n");
     printf("  W, A, S, D:  Move camera\n");
@@ -178,7 +222,11 @@ void printHelp() {
     printf("---------------------------------\n");
 }
 
-void cleanUp() {
+void clean_up() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     if (painter) delete painter;
     if (mesh) delete mesh;
     if (camera) delete camera;
@@ -187,13 +235,12 @@ void cleanUp() {
 
 void reset() {
     if (mesh) {
-        mesh->setScale(glm::vec3(1.0f));
-        mesh->setRotation(glm::vec3(0.0f));
-        mesh->setTranslation(glm::vec3(0.0f));
+        mesh->set_scale(glm::vec3(1.0f));
+        mesh->set_rotation(glm::vec3(0.0f));
+        mesh->set_translation(glm::vec3(0.0f));
     }
-    brightness = 1.0;
     if (camera) camera->reset();
-    needsRedraw = true;
+    needs_redraw = true;
 }
 
 int main(int argc, char** argv) {
@@ -225,35 +272,92 @@ int main(int argc, char** argv) {
     }
 
     init();
-    printHelp();
+    print_help();
 
-    lastFrameTime = (float)glfwGetTime();
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+
+    // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 20.0f);
+    io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\msyh.ttc", 20.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    const char* glsl_version = "#version 330";
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    last_frame_time = (float)glfwGetTime();
 
     while (!glfwWindowShouldClose(window)) {
         float currentTime = (float)glfwGetTime();
-        float deltaTime = currentTime - lastFrameTime;
-        lastFrameTime = currentTime;
+        float deltaTime = currentTime - last_frame_time;
+        last_frame_time = currentTime;
 
-        if (isPlaying && animation) {
+        if (is_playing && animation) {
             // 30 FPS is standard for VMD
-            currentFrame += deltaTime * 30.0f; 
-            if (currentFrame >= animation->getDuration()) {
-                currentFrame = 0.0f; // Loop
+            current_frame += deltaTime * 30.0f; 
+            if (current_frame >= animation->get_duration()) {
+                current_frame = 0.0f; // Loop
             }
-            animation->update(currentFrame, mesh);
-            mesh->updateBoneMatrices();
-            needsRedraw = true;
+            animation->update(current_frame, mesh);
+            mesh->update_bone_matrices();
         }
 
-        if (needsRedraw) {
-            display();
-            glfwSwapBuffers(window);
-            needsRedraw = false;
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        if (ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Select Model")) {
+#ifdef _WIN32
+                    std::string path = open_file_dialog("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", window);
+                    if (!path.empty()) {
+                        strncpy(pmx_path_buf, path.c_str(), sizeof(pmx_path_buf) - 1);
+                        load_model(pmx_path_buf);
+                    }
+#endif
+                }
+                if (ImGui::MenuItem("Select Motion")) {
+#ifdef _WIN32
+                    std::string path = open_file_dialog("VMD Files (*.vmd)\0*.vmd\0All Files (*.*)\0*.*\0", window);
+                    if (!path.empty()) {
+                        strncpy(vmd_path_buf, path.c_str(), sizeof(vmd_path_buf) - 1);
+                        load_motion(vmd_path_buf);
+                    }
+#endif
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
         }
+
+        {
+            ImGui::Begin("MMD Viewer Controls");
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            
+            ImGui::Separator();
+            ImGui::Checkbox("Play Animation", &is_playing);
+
+            ImGui::End();
+        }
+
+        ImGui::Render();
+
+        display();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwSwapBuffers(window);
+        
         glfwPollEvents();
     }
 
-    cleanUp();
+    clean_up();
     glfwTerminate();
     return 0;
 }

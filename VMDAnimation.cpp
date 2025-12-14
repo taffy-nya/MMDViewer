@@ -10,7 +10,7 @@
 #endif
 
 // Helper to convert Shift-JIS to UTF-8
-std::string ShiftJISToUTF8(const std::string& sjis) {
+std::string shift_jis_to_utf8(const std::string& sjis) {
 #ifdef _WIN32
     int w_len = MultiByteToWideChar(932, 0, sjis.c_str(), -1, NULL, 0); // 932 is Shift-JIS
     if (w_len == 0) return sjis;
@@ -78,7 +78,7 @@ bool VMDAnimation::load(const std::string& filename) {
         if (nullPos != std::string::npos) nameStr = nameStr.substr(0, nullPos);
         
         // Convert to UTF-8
-        nameStr = ShiftJISToUTF8(nameStr);
+        nameStr = shift_jis_to_utf8(nameStr);
 
         tracks[nameStr].keyframes.push_back(kf);
         
@@ -97,8 +97,8 @@ bool VMDAnimation::load(const std::string& filename) {
 }
 
 void VMDAnimation::update(float frame, TriMesh* mesh) {
-    auto& bones = mesh->getBones();
-    const auto& mapping = mesh->getBoneMapping();
+    auto& bones = mesh->get_bones();
+    const auto& mapping = mesh->get_bone_mapping();
 
     for (auto& trackPair : tracks) {
         std::string boneName = trackPair.first;
@@ -149,5 +149,5 @@ void VMDAnimation::update(float frame, TriMesh* mesh) {
         }
     }
     
-    mesh->updateBoneMatrices();
+    mesh->update_bone_matrices();
 }
