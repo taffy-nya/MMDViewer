@@ -66,3 +66,39 @@ void Camera::reset() {
 
 // Note: Mouse drag for model rotation is handled outside or we can add it here if we want Camera to manage "Orbit" style
 // For now, we keep the WASD free-cam style from the original code's key_callback
+
+void Camera::orbit(float deltaX, float deltaY) {
+    glm::vec3 target(0.0f, 10.0f, 0.0f);
+    
+    // Current vector from target to camera
+    glm::vec3 offset = position - target;
+    
+    // Rotate around Y axis (Yaw)
+    // Note: deltaX is usually screen space, so dragging left (negative) should rotate camera right (positive angle) or vice versa.
+    // Let's try standard orbit: drag left -> camera moves left -> view rotates right.
+    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), glm::radians(-deltaX), glm::vec3(0.0f, 1.0f, 0.0f));
+    offset = glm::vec3(rotation * glm::vec4(offset, 1.0f));
+    
+    // Rotate around Right axis (Pitch)
+    // We need the current Right axis
+    // front is (target - position), so right is cross(front, world_up)
+    // But we can just use the current 'right' vector if it's up to date.
+    // Let's recalculate to be safe.
+    glm::vec3 currentFront = glm::normalize(target - position);
+    glm::vec3 currentRight = glm::normalize(glm::cross(currentFront, world_up));
+    
+    rotation = glm::rotate(glm::mat4(1.0f), glm::radians(-deltaY), currentRight);
+    offset = glm::vec3(rotation * glm::vec4(offset, 1.0f));
+    
+    position = target + offset;
+    
+    // Update Front to look at target
+    front = glm::normalize(target - position);
+    right = glm::normalize(glm::cross(front, world_up));
+    up = glm::normalize(glm::cross(right, front));
+}
+
+void Camera::pan(float deltaX, float deltaY) {
+    position -= right * deltaX * 0.5f;
+    position += up * deltaY * 0.5f; 
+}

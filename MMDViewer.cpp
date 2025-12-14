@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include "MeshPainter.h"
 #include "VMDAnimation.h"
+#include "Stage.h"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -47,6 +48,7 @@ Camera* camera = nullptr;
 MeshPainter* painter = nullptr;
 TriMesh* mesh = nullptr;
 VMDAnimation* animation = nullptr;
+Stage* stage = nullptr;
 
 bool mouse_left_pressed = false, mouse_right_pressed = false, mouse_middle_pressed = false;
 bool needs_redraw = true;
@@ -58,6 +60,8 @@ glm::vec3 light_pos(0.0f, 50.0f, 50.0f);
 float last_frame_time = 0.0f;
 float current_frame = 0.0f;
 bool is_playing = true;
+bool show_stage = true;
+bool enable_motion = true;
 
 // --- Function Declarations ---
 void framebuffer_size_callback(GLFWwindow* w, int width, int height);
@@ -136,6 +140,7 @@ void CreateNativeMenu(GLFWwindow* window) {
 void init() {
     camera = new Camera();
     painter = new MeshPainter();
+    stage = new Stage(100.0f, 20);
     
     load_model(pmx_path_buf);
     load_motion(vmd_path_buf);
@@ -186,6 +191,7 @@ void load_motion(const std::string& path) {
 // --- Render Loop ---
 void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if (show_stage && stage) stage->draw(camera);
     painter->draw_meshes(camera, light_pos);
 }
 
@@ -206,17 +212,11 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     double deltaY = ypos - last_y;
     
     if (mouse_left_pressed) { 
-        glm::vec3 rot = mesh->get_rotation();
-        rot.y += deltaX * rotate_sensitivity; 
-        rot.x += deltaY * rotate_sensitivity; 
-        mesh->set_rotation(rot);
+        if (camera) camera->orbit(deltaX * rotate_sensitivity * 2.0f, deltaY * rotate_sensitivity * 2.0f);
         needs_redraw = true; 
     }
     if (mouse_right_pressed) { 
-        glm::vec3 trans = mesh->get_translation();
-        trans.x += deltaX * translate_sensitivity; 
-        trans.y -= deltaY * translate_sensitivity; 
-        mesh->set_translation(trans);
+        if (camera) camera->pan(deltaX * translate_sensitivity, deltaY * translate_sensitivity);
         needs_redraw = true; 
     }
     last_x = xpos; last_y = ypos;
@@ -297,6 +297,7 @@ void clean_up() {
     if (mesh) delete mesh;
     if (camera) delete camera;
     if (animation) delete animation;
+    if (stage) delete stage;
 }
 
 void reset() {
@@ -375,14 +376,22 @@ int main(int argc, char** argv) {
         float deltaTime = currentTime - last_frame_time;
         last_frame_time = currentTime;
 
-        if (is_playing && animation) {
-            // 30 FPS is standard for VMD
-            current_frame += deltaTime * 30.0f; 
-            if (current_frame >= animation->get_duration()) {
-                current_frame = 0.0f; // Loop
+        if (enable_motion) {
+            if (is_playing && animation) {
+                // 30 FPS is standard for VMD
+                current_frame += deltaTime * 30.0f; 
+                if (current_frame >= animation->get_duration()) {
+                    current_frame = 0.0f; // Loop
+                }
+                animation->update(current_frame, mesh);
+                mesh->update_bone_matrices();
             }
-            animation->update(current_frame, mesh);
-            mesh->update_bone_matrices();
+        } else {
+            // Reset to T-Pose if motion is disabled
+            if (mesh) {
+                mesh->reset_pose();
+                mesh->update_bone_matrices();
+            }
         }
 
         // Start the Dear ImGui frame
@@ -395,7 +404,11 @@ int main(int argc, char** argv) {
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
             
             ImGui::Separator();
-            ImGui::Checkbox("Play Animation", &is_playing);
+            ImGui::Checkbox("Show Stage", &show_stage);
+            ImGui::Checkbox("Enable Motion", &enable_motion);
+            if (enable_motion) {
+                ImGui::Checkbox("Play Animation", &is_playing);
+            }
 
             ImGui::End();
         }

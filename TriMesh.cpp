@@ -430,6 +430,13 @@ void TriMesh::update_bone_matrices() {
     }
 }
 
+void TriMesh::reset_pose() {
+    for (auto& bone : bones) {
+        bone.local_translation = glm::vec3(0.0f);
+        bone.local_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    }
+}
+
 
 void TriMesh::load_opengl_textures(const std::string& modelBasePath) {
     stbi_set_flip_vertically_on_load(true);

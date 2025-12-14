@@ -20,6 +20,10 @@ public:
     void handle_scroll(double yoffset);
     void handle_keys(int key, int action);
     void update_camera_vectors();
+    
+    // Orbit control
+    void orbit(float deltaX, float deltaY);
+    void pan(float deltaX, float deltaY);
 
     // Camera parameters
     glm::vec3 position;

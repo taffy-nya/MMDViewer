@@ -117,6 +117,7 @@ public:
     const std::map<std::string, int>& get_bone_mapping() const { return bone_mapping; }
 
     void update_bone_matrices();
+    void reset_pose();
 
 private:
     std::vector<glm::vec3> vertex_positions;
