@@ -160,6 +160,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     if (action == GLFW_PRESS) {
+        if (ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().WantCaptureMouse) return;
         glfwGetCursorPos(window, &last_x, &last_y);
         if (button == GLFW_MOUSE_BUTTON_LEFT) mouse_left_pressed = true;
         if (button == GLFW_MOUSE_BUTTON_RIGHT) mouse_right_pressed = true;
@@ -172,6 +173,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+    if (ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().WantCaptureMouse) return;
     if (camera) {
         camera->handle_scroll(yoffset);
         needs_redraw = true;
@@ -252,7 +254,7 @@ int main(int argc, char** argv) {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow* window = glfwCreateWindow(1000, 1000, "MMD Model Viewer", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1920, 1080, "MMD Model Viewer", NULL, NULL);
     if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -272,6 +274,11 @@ int main(int argc, char** argv) {
     }
 
     init();
+
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    framebuffer_size_callback(window, width, height);
+
     print_help();
 
     // Setup Dear ImGui context
