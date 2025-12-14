@@ -17,12 +17,12 @@
 #include <windows.h>
 #include <commdlg.h>
 
-std::string open_file_dialog(const char* filter, GLFWwindow* window) {
+std::string open_file_dialog_hwnd(const char* filter, HWND hwnd) {
     OPENFILENAMEA ofn;
     char fileName[MAX_PATH] = "";
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = glfwGetWin32Window(window);
+    ofn.hwndOwner = hwnd;
     ofn.lpstrFilter = filter;
     ofn.lpstrFile = fileName;
     ofn.nMaxFile = MAX_PATH;
@@ -32,6 +32,10 @@ std::string open_file_dialog(const char* filter, GLFWwindow* window) {
     if (GetOpenFileNameA(&ofn))
         return std::string(fileName);
     return "";
+}
+
+std::string open_file_dialog(const char* filter, GLFWwindow* window) {
+    return open_file_dialog_hwnd(filter, glfwGetWin32Window(window));
 }
 #endif
 
@@ -68,6 +72,65 @@ void reset();
 void print_help();
 void load_model(const std::string& path);
 void load_motion(const std::string& path);
+
+// --- Native Menu ---
+#ifdef _WIN32
+// Menu IDs
+#define ID_FILE_SELECT_MODEL 1001
+#define ID_FILE_SELECT_MOTION 1002
+
+WNDPROC original_wnd_proc = nullptr;
+
+LRESULT CALLBACK MenuWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    if (uMsg == WM_COMMAND) {
+        switch (LOWORD(wParam)) {
+            case ID_FILE_SELECT_MODEL: {
+                std::string path = open_file_dialog_hwnd("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", hwnd);
+                if (!path.empty()) {
+                    strncpy(pmx_path_buf, path.c_str(), 255);
+                    load_model(pmx_path_buf);
+                }
+                return 0;
+            }
+            case ID_FILE_SELECT_MOTION: {
+                std::string path = open_file_dialog_hwnd("VMD Files (*.vmd)\0*.vmd\0All Files (*.*)\0*.*\0", hwnd);
+                if (!path.empty()) {
+                    strncpy(vmd_path_buf, path.c_str(), 255);
+                    load_motion(vmd_path_buf);
+                }
+                return 0;
+            }
+        }
+    }
+    return CallWindowProc(original_wnd_proc, hwnd, uMsg, wParam, lParam);
+}
+
+void CreateNativeMenu(GLFWwindow* window) {
+    HWND hwnd = glfwGetWin32Window(window);
+    HMENU hMenu = CreateMenu();
+    HMENU hFileMenu = CreateMenu();
+
+    AppendMenu(hFileMenu, MF_STRING, ID_FILE_SELECT_MODEL, "Select Model");
+    AppendMenu(hFileMenu, MF_STRING, ID_FILE_SELECT_MOTION, "Select Motion");
+
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, "File");
+
+    SetMenu(hwnd, hMenu);
+    
+    // Subclass the window procedure
+    original_wnd_proc = (WNDPROC)SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)MenuWndProc);
+
+    // Force a redraw and layout update to ensure client area is correct
+    DrawMenuBar(hwnd);
+    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    
+    // Hack: Force a tiny resize to ensure GLFW and Windows agree on the client area size immediately
+    RECT rect;
+    GetWindowRect(hwnd, &rect);
+    SetWindowPos(hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top + 1, SWP_NOMOVE | SWP_NOZORDER);
+    SetWindowPos(hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER);
+}
+#endif
 
 // --- Initialization ---
 void init() {
@@ -130,6 +193,7 @@ void display() {
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) { 
     if (height == 0) height = 1; // Prevent divide by zero
     glViewport(0, 0, width, height); 
+    // Check if camera is initialized before accessing it
     if (camera) {
         camera->aspect = (float)width / (float)height;
         camera->update_camera_vectors(); // Re-calculate projection if needed, though aspect is used in getProjectionMatrix
@@ -275,6 +339,12 @@ int main(int argc, char** argv) {
 
     init();
 
+#ifdef _WIN32
+    CreateNativeMenu(window);
+    // Process pending events (like WM_SIZE) to ensure GLFW updates its window size/content scale
+    glfwPollEvents();
+#endif
+
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     framebuffer_size_callback(window, width, height);
@@ -319,31 +389,6 @@ int main(int argc, char** argv) {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
-        if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Select Model")) {
-#ifdef _WIN32
-                    std::string path = open_file_dialog("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", window);
-                    if (!path.empty()) {
-                        strncpy(pmx_path_buf, path.c_str(), sizeof(pmx_path_buf) - 1);
-                        load_model(pmx_path_buf);
-                    }
-#endif
-                }
-                if (ImGui::MenuItem("Select Motion")) {
-#ifdef _WIN32
-                    std::string path = open_file_dialog("VMD Files (*.vmd)\0*.vmd\0All Files (*.*)\0*.*\0", window);
-                    if (!path.empty()) {
-                        strncpy(vmd_path_buf, path.c_str(), sizeof(vmd_path_buf) - 1);
-                        load_motion(vmd_path_buf);
-                    }
-#endif
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
 
         {
             ImGui::Begin("MMD Viewer Controls");
