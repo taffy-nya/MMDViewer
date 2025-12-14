@@ -378,16 +378,16 @@ int main(int argc, char** argv) {
 
         if (enable_motion) {
             if (is_playing && animation) {
-                // 30 FPS is standard for VMD
+                // VMD 标准帧率为 30 FPS
                 current_frame += deltaTime * 30.0f; 
                 if (current_frame >= animation->get_duration()) {
-                    current_frame = 0.0f; // Loop
+                    current_frame = 0.0f;
                 }
                 animation->update(current_frame, mesh);
                 mesh->update_bone_matrices();
             }
         } else {
-            // Reset to T-Pose if motion is disabled
+            // 不启用动画时，重置模型为 T-Pose
             if (mesh) {
                 mesh->reset_pose();
                 mesh->update_bone_matrices();

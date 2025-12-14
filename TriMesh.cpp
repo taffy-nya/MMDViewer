@@ -438,14 +438,51 @@ void TriMesh::reset_pose() {
 }
 
 
+#ifdef _WIN32
+static std::wstring to_wstring(const std::string& str, UINT codepage) {
+    if (str.empty()) return std::wstring();
+    int size_needed = MultiByteToWideChar(codepage, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(size_needed, 0);
+    MultiByteToWideChar(codepage, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
+}
+#endif
+
 void TriMesh::load_opengl_textures(const std::string& modelBasePath) {
     stbi_set_flip_vertically_on_load(true);
     for (auto& texInfo : textures) {
         if (texInfo.path.empty()) continue;
+
+        int width, height, nrChannels;
+        unsigned char* data = nullptr;
+        std::string reason = "Unknown error";
+
+        // 避免编码问题，用 UTF-8 读取路径
+#ifdef _WIN32
+        // modelBasePath is likely ANSI (from GetOpenFileNameA or argv)
+        std::wstring wBasePath = to_wstring(modelBasePath, CP_ACP);
+        // texInfo.path is UTF-8 (from PMX loader)
+        std::wstring wTexPath = to_wstring(texInfo.path, CP_UTF8);
+        
+        std::wstring wFullPath = wBasePath + wTexPath;
+        // Normalize separators
+        for (wchar_t& c : wFullPath) if (c == L'\\') c = L'/';
+
+        FILE* f = _wfopen(wFullPath.c_str(), L"rb");
+        if (f) {
+            data = stbi_load_from_file(f, &width, &height, &nrChannels, 0);
+            if (!data) reason = stbi_failure_reason();
+            fclose(f);
+        } else {
+            reason = "Unable to open file";
+        }
+#else
         std::string fullPath = modelBasePath + texInfo.path;
         for (char& c : fullPath) if (c == '\\') c = '/';
-        int width, height, nrChannels;
-        unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
+        data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
+        if (!data) reason = stbi_failure_reason();
+#endif
+
         if (data && width > 0 && height > 0) {
             GLenum format = GL_RGB;
             if (nrChannels == 1) format = GL_RED; else if (nrChannels == 4) format = GL_RGBA;
@@ -458,10 +495,11 @@ void TriMesh::load_opengl_textures(const std::string& modelBasePath) {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         } else {
-            std::cerr << "Failed to load texture: " << fullPath << " (Reason: " << stbi_failure_reason() << ")" << std::endl;
+            std::string fullPath = modelBasePath + texInfo.path;
+            std::cerr << "Failed to load texture: " << fullPath << " (Reason: " << reason << ")" << std::endl;
             texInfo.gl_texture_id = 0;
         }
-        stbi_image_free(data);
+        if (data) stbi_image_free(data);
     }
 }
 
