@@ -26,7 +26,7 @@ std::string open_file_dialog(const char* filter, GLFWwindow* window) {
     ofn.lpstrFilter = filter;
     ofn.lpstrFile = fileName;
     ofn.nMaxFile = MAX_PATH;
-    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_NOCHANGEDIR;
     ofn.lpstrDefExt = "";
     
     if (GetOpenFileNameA(&ofn))
@@ -103,7 +103,7 @@ void load_model(const std::string& path) {
     if(last_slash != std::string::npos) base_path = path.substr(0, last_slash + 1);
     mesh->load_opengl_textures(base_path);
 
-    painter->add_mesh(mesh, "shaders/vshader.glsl", "shaders/fshader.glsl", "shaders/vshader_edge.glsl", "shaders/fshader_edge.glsl");
+    painter->add_mesh(mesh);
 }
 
 void load_motion(const std::string& path) {

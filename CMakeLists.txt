@@ -57,9 +57,20 @@ set(IMGUI_SOURCES
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
+# Embedded Shaders Generation
+find_package(Python3 REQUIRED)
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/include/EmbeddedShaders.h
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/embed_shaders.py
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/embed_shaders.py
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Generating embedded shaders header"
+)
+
 # target
 aux_source_directory("./" PROJECT_SOURCES)
-add_executable(MMDViewer ${PROJECT_SOURCES} ${IMGUI_SOURCES})
+# Ensure the header is generated before building the executable
+add_executable(MMDViewer ${PROJECT_SOURCES} ${IMGUI_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/include/EmbeddedShaders.h)
 target_include_directories(MMDViewer PRIVATE include ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${stb_SOURCE_DIR})
 
 # dependency

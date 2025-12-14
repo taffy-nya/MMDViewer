@@ -1,4 +1,6 @@
 #include "Angel.h"
+#include "EmbeddedShaders.h"
+#include <cstring>
 
 namespace Angel {
 
@@ -6,6 +8,16 @@ namespace Angel {
 static char*
 readShaderSource(const char* shaderFile)
 {
+    // Try embedded shader first if in Release mode (or always if you prefer)
+#ifdef NDEBUG
+    std::string embedded = get_embedded_shader(shaderFile);
+    if (!embedded.empty()) {
+        char* buf = new char[embedded.size() + 1];
+        std::strcpy(buf, embedded.c_str());
+        return buf;
+    }
+#endif
+
 	#ifdef __APPLE__	// for MacOS
 		FILE *fp;
 		fp = fopen(shaderFile, "r");

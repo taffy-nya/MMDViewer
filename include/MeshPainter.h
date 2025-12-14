@@ -6,6 +6,22 @@
 #include <vector>
 #include <string>
 
+struct ShaderConfig {
+    std::string vshader;
+    std::string fshader;
+    std::string vshader_edge;
+    std::string fshader_edge;
+
+    static ShaderConfig default_mmd() {
+        return {
+            "shaders/vshader.glsl",
+            "shaders/fshader.glsl",
+            "shaders/vshader_edge.glsl",
+            "shaders/fshader_edge.glsl"
+        };
+    }
+};
+
 struct OpenGLObject {
     GLuint vao = 0, vbo = 0, ebo = 0, program = 0;
     
@@ -28,7 +44,7 @@ public:
     MeshPainter();
     ~MeshPainter();
 
-    void add_mesh(TriMesh* mesh, const std::string& vshader, const std::string& fshader, const std::string& vshader_edge, const std::string& fshader_edge);
+    void add_mesh(TriMesh* mesh, const ShaderConfig& config = ShaderConfig::default_mmd());
     void draw_meshes(Camera* camera, const glm::vec3& lightPos);
     void clean_up();
 

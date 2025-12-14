@@ -23,12 +23,12 @@ void MeshPainter::clean_up() {
     meshes.clear();
 }
 
-void MeshPainter::add_mesh(TriMesh* mesh, const std::string& vshader, const std::string& fshader, const std::string& vshader_edge, const std::string& fshader_edge) {
+void MeshPainter::add_mesh(TriMesh* mesh, const ShaderConfig& config) {
     MeshEntry entry;
     entry.mesh = mesh;
     
     // Bind Main Object
-    bind_object_and_data(mesh, entry.main_object, vshader, fshader, false);
+    bind_object_and_data(mesh, entry.main_object, config.vshader, config.fshader, false);
     
     // Cache Uniform Locations for Main Object
     entry.main_object.model_location = glGetUniformLocation(entry.main_object.program, "model");
@@ -45,7 +45,7 @@ void MeshPainter::add_mesh(TriMesh* mesh, const std::string& vshader, const std:
     entry.main_object.bone_matrices_location = glGetUniformLocation(entry.main_object.program, "boneMatrices");
 
     
-    entry.edge_object.program = InitShader(vshader_edge.c_str(), fshader_edge.c_str());
+    entry.edge_object.program = InitShader(config.vshader_edge.c_str(), config.fshader_edge.c_str());
     entry.edge_object.model_location = glGetUniformLocation(entry.edge_object.program, "model");
     entry.edge_object.view_location = glGetUniformLocation(entry.edge_object.program, "view");
     entry.edge_object.projection_location = glGetUniformLocation(entry.edge_object.program, "projection");
