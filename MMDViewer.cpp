@@ -159,7 +159,7 @@ void init() {
         mainLight.type = LIGHT_DIRECTIONAL;
         mainLight.direction = glm::vec3(-0.5f, -1.0f, -0.5f);
         mainLight.color = glm::vec3(1.0f);
-        mainLight.intensity = 1.0f;
+        mainLight.intensity = 0.5f;
         lights.push_back(mainLight);
     }
 

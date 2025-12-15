@@ -71,7 +71,7 @@ Stage::Stage(float size, int divisions) {
     ambient_strength_loc = glGetUniformLocation(program, "ambientStrength");
     num_lights_loc = glGetUniformLocation(program, "numLights");
 
-    for(int i=0; i<16; ++i) {
+    for (int i = 0; i < 16; ++i) {
         std::string base = "lights[" + std::to_string(i) + "]";
         light_locations[i].position = glGetUniformLocation(program, (base + ".position").c_str());
         light_locations[i].direction = glGetUniformLocation(program, (base + ".direction").c_str());

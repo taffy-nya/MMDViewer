@@ -21,6 +21,6 @@ struct Light {
     bool enabled;
 
     Light() : 
-        position(0.0f), direction(0.0f, -1.0f, 0.0f), color(1.0f), intensity(1.0f), type(LIGHT_POINT),
+        position(0.0f), direction(0.0f, -1.0f, 0.0f), color(1.0f), intensity(0.5f), type(LIGHT_POINT),
         constant(1.0f), linear(0.09f), quadratic(0.032f), enabled(true) {}
 };
