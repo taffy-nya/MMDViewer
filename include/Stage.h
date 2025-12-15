@@ -4,7 +4,10 @@
 #include "Angel.h"
 #include "Camera.h"
 #include "Light.h"
+#include "TriMesh.h"
+#include "MeshPainter.h"
 #include <vector>
+#include <string>
 
 class Stage {
 public:
@@ -13,7 +16,15 @@ public:
     void draw(Camera* camera, const std::vector<Light>& lights, const glm::vec3& ambientColor, float ambientStrength, GLuint shadowMap, const glm::mat4& lightSpaceMatrix);
     void draw_shadow(const glm::mat4& lightSpaceMatrix);
 
+    void load_pmx(const std::string& filename);
+    void use_default_grid();
+
 private:
+    // Custom Stage
+    TriMesh* stage_mesh = nullptr;
+    MeshPainter* stage_painter = nullptr;
+
+    // Default Grid
     GLuint vao_lines, vbo_lines;
     GLuint vao_plane, vbo_plane;
     GLuint program; // For Plane (Lit)

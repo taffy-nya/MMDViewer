@@ -102,6 +102,9 @@ Stage::Stage(float size, int divisions) {
 }
 
 Stage::~Stage() {
+    if (stage_painter) delete stage_painter;
+    if (stage_mesh) delete stage_mesh;
+
     glDeleteVertexArrays(1, &vao_lines);
     glDeleteBuffers(1, &vbo_lines);
     glDeleteVertexArrays(1, &vao_plane);
@@ -111,7 +114,33 @@ Stage::~Stage() {
     glDeleteProgram(program_lines);
 }
 
+void Stage::load_pmx(const std::string& filename) {
+    use_default_grid(); // Clean up first
+
+    stage_mesh = new TriMesh();
+    stage_mesh->read_pmx(filename);
+
+    std::string base_path = "";
+    size_t last_slash = filename.rfind('/');
+    if(last_slash == std::string::npos) last_slash = filename.rfind('\\');
+    if(last_slash != std::string::npos) base_path = filename.substr(0, last_slash + 1);
+    stage_mesh->load_opengl_textures(base_path);
+
+    stage_painter = new MeshPainter();
+    stage_painter->add_mesh(stage_mesh);
+}
+
+void Stage::use_default_grid() {
+    if (stage_painter) { delete stage_painter; stage_painter = nullptr; }
+    if (stage_mesh) { delete stage_mesh; stage_mesh = nullptr; }
+}
+
 void Stage::draw_shadow(const glm::mat4& lightSpaceMatrix) {
+    if (stage_painter) {
+        stage_painter->draw_shadow(lightSpaceMatrix);
+        return;
+    }
+
     glUseProgram(shadow_program);
     
     glm::mat4 model = glm::mat4(1.0f);
@@ -124,6 +153,11 @@ void Stage::draw_shadow(const glm::mat4& lightSpaceMatrix) {
 }
 
 void Stage::draw(Camera* camera, const std::vector<Light>& lights, const glm::vec3& ambientColor, float ambientStrength, GLuint shadowMap, const glm::mat4& lightSpaceMatrix) {
+    if (stage_painter) {
+        stage_painter->draw_meshes(camera, lights, ambientColor, ambientStrength, shadowMap, lightSpaceMatrix);
+        return;
+    }
+
     glm::mat4 model = glm::mat4(1.0f);
     glm::mat4 view = camera->get_view_matrix();
     glm::mat4 projection = camera->get_projection_matrix();

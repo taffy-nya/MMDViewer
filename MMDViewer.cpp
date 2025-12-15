@@ -475,6 +475,17 @@ int main(int argc, char** argv) {
             
             ImGui::Separator();
             ImGui::Checkbox("Show Stage", &show_stage);
+            if (ImGui::Button("Load Stage PMX")) {
+                std::string path = open_file_dialog("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", window);
+                if (!path.empty()) {
+                    stage->load_pmx(path);
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Reset Stage")) {
+                stage->use_default_grid();
+            }
+
             ImGui::Checkbox("Enable Motion", &enable_motion);
             if (enable_motion) {
                 ImGui::Checkbox("Play Animation", &is_playing);
