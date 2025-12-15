@@ -78,6 +78,7 @@ struct MaterialInfo {
     bool has_texture;
     int texture_index;
     int toon_texture_index;
+    bool use_internal_toon; // Added flag
 
     // 几何
     unsigned int num_faces;

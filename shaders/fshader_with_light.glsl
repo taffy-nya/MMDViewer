@@ -25,6 +25,8 @@ uniform int numLights;
 uniform vec4 objectColor;   
 uniform vec3 viewPos;
 uniform float brightness;
+uniform float shininess;
+uniform vec3 specularColor;
 
 uniform vec3 ambientColor;
 uniform float ambientStrength;
@@ -104,8 +106,8 @@ void main()
 
         // Specular
         vec3 halfwayDir = normalize(lightDir + viewDir);
-        float spec = pow(max(dot(norm, halfwayDir), 0.0), 32.0);
-        vec3 specular = 0.5 * spec * lights[i].color * lights[i].intensity * objectColor.rgb * (1.0 - shadow); 
+        float spec = pow(max(dot(norm, halfwayDir), 0.0), shininess);
+        vec3 specular = spec * lights[i].color * lights[i].intensity * specularColor * (1.0 - shadow); 
 
         lighting += (diffuse * finalObjectColor + specular) * attenuation;
     }

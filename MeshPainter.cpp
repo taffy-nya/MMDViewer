@@ -12,6 +12,7 @@ void MeshPainter::clean_up() {
     if (gizmo_vao != 0) glDeleteVertexArrays(1, &gizmo_vao);
     if (gizmo_vbo != 0) glDeleteBuffers(1, &gizmo_vbo);
     if (gizmo_program != 0) glDeleteProgram(gizmo_program);
+    if (default_toon_texture != 0) glDeleteTextures(1, &default_toon_texture);
 
     for (auto& entry : meshes) {
         glDeleteVertexArrays(1, &entry.main_object.vao);
@@ -44,6 +45,7 @@ void MeshPainter::add_mesh(TriMesh* mesh, const ShaderConfig& config) {
     entry.main_object.view_pos_location = glGetUniformLocation(entry.main_object.program, "viewPos");
     entry.main_object.has_texture_location = glGetUniformLocation(entry.main_object.program, "hasTexture");
     entry.main_object.shininess_location = glGetUniformLocation(entry.main_object.program, "shininess");
+    entry.main_object.specular_color_location = glGetUniformLocation(entry.main_object.program, "specularColor");
     entry.main_object.texture_sampler_location = glGetUniformLocation(entry.main_object.program, "textureSampler");
     entry.main_object.toon_sampler_location = glGetUniformLocation(entry.main_object.program, "toonSampler");
     entry.main_object.bone_matrices_location = glGetUniformLocation(entry.main_object.program, "boneMatrices");
@@ -283,6 +285,7 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
         for (const auto& mat : entry.mesh->get_materials()) {
             glUniform4fv(entry.main_object.object_color_location, 1, glm::value_ptr(mat.diffuse_color));
             glUniform1f(entry.main_object.shininess_location, mat.shininess);
+            glUniform3fv(entry.main_object.specular_color_location, 1, glm::value_ptr(mat.specular_color));
             
             if (mat.has_texture) {
                 glUniform1i(entry.main_object.has_texture_location, 1);
@@ -290,6 +293,19 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
                 glBindTexture(GL_TEXTURE_2D, entry.mesh->get_textures()[mat.texture_index].gl_texture_id);
             } else {
                 glUniform1i(entry.main_object.has_texture_location, 0);
+            }
+
+            // Bind Toon Texture
+            glActiveTexture(GL_TEXTURE1);
+            if (mat.use_internal_toon) {
+                // Use default white texture for internal toons (since we don't have them loaded)
+                glBindTexture(GL_TEXTURE_2D, default_toon_texture);
+            } else {
+                if (mat.toon_texture_index >= 0 && mat.toon_texture_index < entry.mesh->get_textures().size()) {
+                    glBindTexture(GL_TEXTURE_2D, entry.mesh->get_textures()[mat.toon_texture_index].gl_texture_id);
+                } else {
+                    glBindTexture(GL_TEXTURE_2D, default_toon_texture);
+                }
             }
             
             glDrawElements(GL_TRIANGLES, mat.num_faces, GL_UNSIGNED_INT, (void*)(face_offset*sizeof(unsigned int)));
@@ -363,6 +379,16 @@ void MeshPainter::init_gizmo_resources() {
     gizmo_view_loc = glGetUniformLocation(gizmo_program, "view");
     gizmo_proj_loc = glGetUniformLocation(gizmo_program, "projection");
     gizmo_color_loc = glGetUniformLocation(gizmo_program, "color");
+
+    // Create default white toon texture
+    glGenTextures(1, &default_toon_texture);
+    glBindTexture(GL_TEXTURE_2D, default_toon_texture);
+    unsigned char whitePixel[3] = { 255, 255, 255 };
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, whitePixel);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
 void MeshPainter::draw_light_gizmos(Camera* camera, const std::vector<Light>& lights) {

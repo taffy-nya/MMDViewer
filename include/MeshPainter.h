@@ -29,7 +29,7 @@ struct OpenGLObject {
     // Uniform locations
     GLuint model_location, view_location, projection_location;
     GLuint object_color_location, view_pos_location;
-    GLuint has_texture_location, shininess_location;
+    GLuint has_texture_location, shininess_location, specular_color_location;
     GLuint edge_size_location, edge_color_location; // For edge shader
     GLuint texture_sampler_location, toon_sampler_location;
     GLuint bone_matrices_location;
@@ -82,6 +82,8 @@ private:
     GLuint gizmo_program = 0;
     GLuint gizmo_vao = 0, gizmo_vbo = 0;
     GLuint gizmo_model_loc, gizmo_view_loc, gizmo_proj_loc, gizmo_color_loc;
+    
+    GLuint default_toon_texture = 0; // Default white texture for missing/internal toons
     void init_gizmo_resources();
 };
 

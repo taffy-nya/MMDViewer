@@ -198,8 +198,15 @@ void TriMesh::read_pmx(const std::string& filename) {
         mat.has_texture = (mat.texture_index != -1);
         file.seekg(texture_index_size + 1, std::ios::cur);
         unsigned char toon_ref_type; file.read(reinterpret_cast<char*>(&toon_ref_type), 1);
-        if (toon_ref_type == 0) { mat.toon_texture_index = read_index(file, texture_index_size); }
-        else { unsigned char internal_index; file.read(reinterpret_cast<char*>(&internal_index), 1); mat.toon_texture_index = internal_index; }
+        if (toon_ref_type == 0) { 
+            mat.toon_texture_index = read_index(file, texture_index_size); 
+            mat.use_internal_toon = false;
+        }
+        else { 
+            unsigned char internal_index; file.read(reinterpret_cast<char*>(&internal_index), 1); 
+            mat.toon_texture_index = internal_index; 
+            mat.use_internal_toon = true;
+        }
         skip_pmx_string(file);
         file.read(reinterpret_cast<char*>(&mat.num_faces), 4);
         materials.push_back(mat);
