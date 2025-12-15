@@ -19,12 +19,12 @@
 #include <commdlg.h>
 #include <mmsystem.h>
 
-std::string open_file_dialog_hwnd(const char* filter, HWND hwnd) {
+std::string open_file_dialog(const char* filter, GLFWwindow* window) {
     OPENFILENAMEA ofn;
     char fileName[MAX_PATH] = "";
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = hwnd;
+    ofn.hwndOwner = glfwGetWin32Window(window);
     ofn.lpstrFilter = filter;
     ofn.lpstrFile = fileName;
     ofn.nMaxFile = MAX_PATH;
@@ -34,10 +34,6 @@ std::string open_file_dialog_hwnd(const char* filter, HWND hwnd) {
     if (GetOpenFileNameA(&ofn))
         return std::string(fileName);
     return "";
-}
-
-std::string open_file_dialog(const char* filter, GLFWwindow* window) {
-    return open_file_dialog_hwnd(filter, glfwGetWin32Window(window));
 }
 
 // --- Global Variables ---
@@ -88,63 +84,6 @@ void reset();
 void print_help();
 void load_model(const std::string& path);
 void load_motion(const std::string& path);
-
-// --- Native Menu ---
-// Menu IDs
-#define ID_FILE_SELECT_MODEL 1001
-#define ID_FILE_SELECT_MOTION 1002
-
-WNDPROC original_wnd_proc = nullptr;
-
-LRESULT CALLBACK MenuWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    if (uMsg == WM_COMMAND) {
-        switch (LOWORD(wParam)) {
-            case ID_FILE_SELECT_MODEL: {
-                std::string path = open_file_dialog_hwnd("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", hwnd);
-                if (!path.empty()) {
-                    strncpy(pmx_path_buf, path.c_str(), 255);
-                    load_model(pmx_path_buf);
-                }
-                return 0;
-            }
-            case ID_FILE_SELECT_MOTION: {
-                std::string path = open_file_dialog_hwnd("VMD Files (*.vmd)\0*.vmd\0All Files (*.*)\0*.*\0", hwnd);
-                if (!path.empty()) {
-                    strncpy(vmd_path_buf, path.c_str(), 255);
-                    load_motion(vmd_path_buf);
-                }
-                return 0;
-            }
-        }
-    }
-    return CallWindowProc(original_wnd_proc, hwnd, uMsg, wParam, lParam);
-}
-
-void CreateNativeMenu(GLFWwindow* window) {
-    HWND hwnd = glfwGetWin32Window(window);
-    HMENU hMenu = CreateMenu();
-    HMENU hFileMenu = CreateMenu();
-
-    AppendMenu(hFileMenu, MF_STRING, ID_FILE_SELECT_MODEL, "Select Model");
-    AppendMenu(hFileMenu, MF_STRING, ID_FILE_SELECT_MOTION, "Select Motion");
-
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, "File");
-
-    SetMenu(hwnd, hMenu);
-    
-    // Subclass the window procedure
-    original_wnd_proc = (WNDPROC)SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)MenuWndProc);
-
-    // Force a redraw and layout update to ensure client area is correct
-    DrawMenuBar(hwnd);
-    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-    
-    // Hack: Force a tiny resize to ensure GLFW and Windows agree on the client area size immediately
-    RECT rect;
-    GetWindowRect(hwnd, &rect);
-    SetWindowPos(hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top + 1, SWP_NOMOVE | SWP_NOZORDER);
-    SetWindowPos(hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER);
-}
 
 // --- Initialization ---
 void init() {
@@ -416,9 +355,10 @@ int main(int argc, char** argv) {
 
     init();
 
-    CreateNativeMenu(window);
-    // Process pending events (like WM_SIZE) to ensure GLFW updates its window size/content scale
-    glfwPollEvents();
+    // 适应初始视口
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    framebuffer_size_callback(window, width, height);
 
     print_help();
 
@@ -471,79 +411,111 @@ int main(int argc, char** argv) {
 
         {
             ImGui::Begin("MMD Viewer Controls");
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
             
-            ImGui::Separator();
-            ImGui::Checkbox("Show Stage", &show_stage);
-            if (ImGui::Button("Load Stage PMX")) {
-                std::string path = open_file_dialog("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", window);
-                if (!path.empty()) {
-                    stage->load_pmx(path);
-                }
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Reset Stage")) {
-                stage->use_default_grid();
-            }
-
-            ImGui::Checkbox("Enable Motion", &enable_motion);
-            if (enable_motion) {
-                ImGui::Checkbox("Play Animation", &is_playing);
-            }
-
-            ImGui::Separator();
-            ImGui::Text("Performance");
-            ImGui::Checkbox("Limit FPS", &limit_fps);
-            if (limit_fps) {
-                ImGui::SliderInt("Target FPS", &target_fps, 10, 240);
-            }
-
-            ImGui::Separator();
-            ImGui::Text("Lighting");
-            ImGui::ColorEdit3("Ambient Color", (float*)&ambient_color);
-            ImGui::SliderFloat("Ambient Strength", &ambient_strength, 0.0f, 1.0f);
-
-            if (ImGui::CollapsingHeader("Lights")) {
-                if (ImGui::Button("Add Point Light")) {
-                    if (lights.size() < 16) {
-                        Light l;
-                        l.type = LIGHT_POINT;
-                        l.position = glm::vec3(0.0f, 10.0f, 0.0f);
-                        lights.push_back(l);
-                    }
-                }
+            if (ImGui::BeginTabBar("ControlTabs")) {
                 
-                for (int i = 0; i < lights.size(); ++i) {
-                    ImGui::PushID(i);
-                    if (ImGui::TreeNode(("Light " + std::to_string(i)).c_str())) {
-                        ImGui::Checkbox("Enabled", &lights[i].enabled);
-                        const char* types[] = { "Directional", "Point" };
-                        ImGui::Combo("Type", &lights[i].type, types, IM_ARRAYSIZE(types));
-                        
-                        if (lights[i].type == LIGHT_DIRECTIONAL) {
-                            ImGui::DragFloat3("Direction", (float*)&lights[i].direction, 0.1f);
-                        } else {
-                            ImGui::DragFloat3("Position", (float*)&lights[i].position, 0.5f);
-                            ImGui::DragFloat("Constant", &lights[i].constant, 0.01f, 0.0f, 10.0f);
-                            ImGui::DragFloat("Linear", &lights[i].linear, 0.001f, 0.0f, 1.0f);
-                            ImGui::DragFloat("Quadratic", &lights[i].quadratic, 0.0001f, 0.0f, 1.0f);
-                        }
-                        
-                        ImGui::ColorEdit3("Color", (float*)&lights[i].color);
-                        ImGui::SliderFloat("Intensity", &lights[i].intensity, 0.0f, 5.0f);
-                        
-                        if (ImGui::Button("Remove")) {
-                            lights.erase(lights.begin() + i);
-                            ImGui::TreePop();
-                            ImGui::PopID();
-                            i--; // Adjust index
-                            continue; 
-                        }
-                        
-                        ImGui::TreePop();
+                if (ImGui::BeginTabItem("General")) {
+                    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+                    ImGui::Separator();
+                    ImGui::Text("Performance");
+                    ImGui::Checkbox("Limit FPS", &limit_fps);
+                    if (limit_fps) {
+                        ImGui::SliderInt("Target FPS", &target_fps, 10, 240);
                     }
-                    ImGui::PopID();
+                    ImGui::EndTabItem();
                 }
+
+                if (ImGui::BeginTabItem("Model")) {
+                    if (ImGui::Button("Load Model (.pmx)")) {
+                        std::string path = open_file_dialog("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", window);
+                        if (!path.empty()) {
+                            strncpy(pmx_path_buf, path.c_str(), sizeof(pmx_path_buf) - 1);
+                            load_model(pmx_path_buf);
+                        }
+                    }
+                    if (ImGui::Button("Load Motion (.vmd)")) {
+                        std::string path = open_file_dialog("VMD Files (*.vmd)\0*.vmd\0All Files (*.*)\0*.*\0", window);
+                        if (!path.empty()) {
+                            strncpy(vmd_path_buf, path.c_str(), sizeof(vmd_path_buf) - 1);
+                            load_motion(vmd_path_buf);
+                        }
+                    }
+                    ImGui::Separator();
+                    ImGui::Text("Animation");
+                    ImGui::Checkbox("Enable Motion", &enable_motion);
+                    if (enable_motion) {
+                        ImGui::Checkbox("Play Animation", &is_playing);
+                    }
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Stage")) {
+                    ImGui::Checkbox("Show Stage", &show_stage);
+                    if (ImGui::Button("Load Stage PMX")) {
+                        std::string path = open_file_dialog("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", window);
+                        if (!path.empty()) {
+                            stage->load_pmx(path);
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Reset Stage")) {
+                        stage->use_default_grid();
+                    }
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Lighting")) {
+                    ImGui::Text("Ambient Light");
+                    ImGui::ColorEdit3("Color", (float*)&ambient_color);
+                    ImGui::SliderFloat("Strength", &ambient_strength, 0.0f, 1.0f);
+
+                    ImGui::Separator();
+                    ImGui::Text("Dynamic Lights");
+                    if (ImGui::Button("Add Point Light")) {
+                        if (lights.size() < 16) {
+                            Light l;
+                            l.type = LIGHT_POINT;
+                            l.position = glm::vec3(0.0f, 10.0f, 0.0f);
+                            lights.push_back(l);
+                        }
+                    }
+                    
+                    ImGui::Separator();
+                    for (int i = 0; i < lights.size(); ++i) {
+                        ImGui::PushID(i);
+                        if (ImGui::TreeNode(("Light " + std::to_string(i)).c_str())) {
+                            ImGui::Checkbox("Enabled", &lights[i].enabled);
+                            const char* types[] = { "Directional", "Point" };
+                            ImGui::Combo("Type", &lights[i].type, types, IM_ARRAYSIZE(types));
+                            
+                            if (lights[i].type == LIGHT_DIRECTIONAL) {
+                                ImGui::DragFloat3("Direction", (float*)&lights[i].direction, 0.1f);
+                            } else {
+                                ImGui::DragFloat3("Position", (float*)&lights[i].position, 0.5f);
+                                ImGui::DragFloat("Constant", &lights[i].constant, 0.01f, 0.0f, 10.0f);
+                                ImGui::DragFloat("Linear", &lights[i].linear, 0.001f, 0.0f, 1.0f);
+                                ImGui::DragFloat("Quadratic", &lights[i].quadratic, 0.0001f, 0.0f, 1.0f);
+                            }
+                            
+                            ImGui::ColorEdit3("Color", (float*)&lights[i].color);
+                            ImGui::SliderFloat("Intensity", &lights[i].intensity, 0.0f, 5.0f);
+                            
+                            if (ImGui::Button("Remove")) {
+                                lights.erase(lights.begin() + i);
+                                ImGui::TreePop();
+                                ImGui::PopID();
+                                i--; // Adjust index
+                                continue; 
+                            }
+                            
+                            ImGui::TreePop();
+                        }
+                        ImGui::PopID();
+                    }
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
             }
 
             ImGui::End();
