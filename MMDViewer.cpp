@@ -52,7 +52,7 @@ Stage* stage = nullptr;
 
 bool mouse_left_pressed = false, mouse_right_pressed = false, mouse_middle_pressed = false;
 bool needs_redraw = true;
-double rotate_sensitivity = 0.2, translate_sensitivity = 0.02;
+double rotate_sensitivity = 0.2, translate_sensitivity = 0.05;
 double last_x, last_y;
 
 // Lighting
@@ -284,7 +284,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     // Check if camera is initialized before accessing it
     if (camera) {
         camera->aspect = (float)width / (float)height;
-        camera->update_camera_vectors(); // Re-calculate projection if needed, though aspect is used in getProjectionMatrix
+        // camera->update_camera_vectors(); // Removed: This resets rotation to Euler angles
     }
     needs_redraw = true; 
 }
@@ -357,8 +357,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void print_help() {
     printf("--- MMD Model Viewer Controls ---\n");
     printf("Mouse:\n");
-    printf("  Left Drag:   Rotate model\n");
-    printf("  Right Drag:  Translate model\n");
+    printf("  Left Drag:   Rotate camera\n");
+    printf("  Right Drag:  Pan camera\n");
     printf("  Scroll:      Zoom in/out\n\n");
     printf("Keyboard:\n");
     printf("  W, A, S, D:  Move camera\n");

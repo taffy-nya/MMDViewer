@@ -3,6 +3,7 @@
 
 Camera::Camera()
     : position(glm::vec3(0.0f, 10.0f, 35.0f)),
+      target(glm::vec3(0.0f, 10.0f, 0.0f)),
       front(glm::vec3(0.0f, 0.0f, -1.0f)),
       up(glm::vec3(0.0f, 1.0f, 0.0f)),
       world_up(glm::vec3(0.0f, 1.0f, 0.0f)),
@@ -43,10 +44,14 @@ void Camera::update_camera_vectors() {
 
 void Camera::handle_keys(int key, int action) {
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-        if (key == GLFW_KEY_W) position += movement_speed * front;
-        if (key == GLFW_KEY_S) position -= movement_speed * front;
-        if (key == GLFW_KEY_A) position -= glm::normalize(glm::cross(front, up)) * movement_speed;
-        if (key == GLFW_KEY_D) position += glm::normalize(glm::cross(front, up)) * movement_speed;
+        glm::vec3 delta(0.0f);
+        if (key == GLFW_KEY_W) delta += movement_speed * front;
+        if (key == GLFW_KEY_S) delta -= movement_speed * front;
+        if (key == GLFW_KEY_A) delta -= glm::normalize(glm::cross(front, up)) * movement_speed;
+        if (key == GLFW_KEY_D) delta += glm::normalize(glm::cross(front, up)) * movement_speed;
+        
+        position += delta;
+        target += delta;
     }
 }
 
@@ -57,6 +62,7 @@ void Camera::handle_scroll(double yoffset) {
 
 void Camera::reset() {
     position = glm::vec3(0.0f, 10.0f, 35.0f);
+    target = glm::vec3(0.0f, 10.0f, 0.0f);
     front = glm::vec3(0.0f, 0.0f, -1.0f);
     up = glm::vec3(0.0f, 1.0f, 0.0f);
     yaw = -90.0f;
@@ -68,37 +74,34 @@ void Camera::reset() {
 // For now, we keep the WASD free-cam style from the original code's key_callback
 
 void Camera::orbit(float deltaX, float deltaY) {
-    glm::vec3 target(0.0f, 10.0f, 0.0f);
-    
     // Current vector from target to camera
     glm::vec3 offset = position - target;
     
-    // Rotate around Y axis (Yaw)
-    // Note: deltaX is usually screen space, so dragging left (negative) should rotate camera right (positive angle) or vice versa.
-    // Let's try standard orbit: drag left -> camera moves left -> view rotates right.
-    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), glm::radians(-deltaX), glm::vec3(0.0f, 1.0f, 0.0f));
-    offset = glm::vec3(rotation * glm::vec4(offset, 1.0f));
-    
-    // Rotate around Right axis (Pitch)
-    // We need the current Right axis
-    // front is (target - position), so right is cross(front, world_up)
-    // But we can just use the current 'right' vector if it's up to date.
-    // Let's recalculate to be safe.
-    glm::vec3 currentFront = glm::normalize(target - position);
-    glm::vec3 currentRight = glm::normalize(glm::cross(currentFront, world_up));
-    
-    rotation = glm::rotate(glm::mat4(1.0f), glm::radians(-deltaY), currentRight);
-    offset = glm::vec3(rotation * glm::vec4(offset, 1.0f));
+    // Rotate around World Up (Yaw)
+    // We rotate the offset, and also the camera's Up and Right vectors to maintain orientation
+    glm::mat4 yawRot = glm::rotate(glm::mat4(1.0f), glm::radians(-deltaX), glm::vec3(0.0f, 1.0f, 0.0f));
+    offset = glm::vec3(yawRot * glm::vec4(offset, 1.0f));
+    up = glm::vec3(yawRot * glm::vec4(up, 0.0f));
+    right = glm::vec3(yawRot * glm::vec4(right, 0.0f));
+
+    // Rotate around Camera Right (Pitch)
+    // This allows going over the top (up vector will flip naturally)
+    glm::mat4 pitchRot = glm::rotate(glm::mat4(1.0f), glm::radians(-deltaY), right);
+    offset = glm::vec3(pitchRot * glm::vec4(offset, 1.0f));
+    up = glm::vec3(pitchRot * glm::vec4(up, 0.0f));
     
     position = target + offset;
     
     // Update Front to look at target
     front = glm::normalize(target - position);
-    right = glm::normalize(glm::cross(front, world_up));
+    
+    // Re-orthogonalize to prevent drift
+    right = glm::normalize(glm::cross(front, up));
     up = glm::normalize(glm::cross(right, front));
 }
 
 void Camera::pan(float deltaX, float deltaY) {
-    position -= right * deltaX * 0.5f;
-    position += up * deltaY * 0.5f; 
+    glm::vec3 offset = -right * deltaX * 0.5f + up * deltaY * 0.5f;
+    position += offset;
+    target += offset;
 }
