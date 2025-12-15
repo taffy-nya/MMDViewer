@@ -81,6 +81,7 @@ private:
     // Gizmo resources
     GLuint gizmo_program = 0;
     GLuint gizmo_vao = 0, gizmo_vbo = 0;
+    GLuint gizmo_line_vao = 0, gizmo_line_vbo = 0;
     GLuint gizmo_model_loc, gizmo_view_loc, gizmo_proj_loc, gizmo_color_loc;
     
     GLuint default_toon_texture = 0; // Default white texture for missing/internal toons

@@ -2,6 +2,8 @@
 #include "Angel.h"
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp> // Added for rotation
 
 MeshPainter::MeshPainter() {
     init_gizmo_resources();
@@ -11,6 +13,8 @@ MeshPainter::~MeshPainter() { clean_up(); }
 void MeshPainter::clean_up() {
     if (gizmo_vao != 0) glDeleteVertexArrays(1, &gizmo_vao);
     if (gizmo_vbo != 0) glDeleteBuffers(1, &gizmo_vbo);
+    if (gizmo_line_vao != 0) glDeleteVertexArrays(1, &gizmo_line_vao);
+    if (gizmo_line_vbo != 0) glDeleteBuffers(1, &gizmo_line_vbo);
     if (gizmo_program != 0) glDeleteProgram(gizmo_program);
     if (default_toon_texture != 0) glDeleteTextures(1, &default_toon_texture);
 
@@ -374,6 +378,19 @@ void MeshPainter::init_gizmo_resources() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
+    // Line Gizmo (0,0,0) to (0,0,1)
+    float line_vertices[] = {
+        0.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f
+    };
+    glGenVertexArrays(1, &gizmo_line_vao);
+    glGenBuffers(1, &gizmo_line_vbo);
+    glBindVertexArray(gizmo_line_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, gizmo_line_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
     gizmo_program = InitShader("shaders/vshader_color.glsl", "shaders/fshader_color.glsl");
     gizmo_model_loc = glGetUniformLocation(gizmo_program, "model");
     gizmo_view_loc = glGetUniformLocation(gizmo_program, "view");
@@ -411,15 +428,40 @@ void MeshPainter::draw_light_gizmos(Camera* camera, const std::vector<Light>& li
         if (light.type == LIGHT_POINT) {
             model = glm::translate(model, light.position);
             model = glm::scale(model, glm::vec3(0.5f));
+            
+            glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform3fv(gizmo_color_loc, 1, glm::value_ptr(light.color));
+            glBindVertexArray(gizmo_vao);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
         } else {
-            // 暂不显示平行光源
-            continue; 
+            // Directional Light Visualization
+            // Draw a line from a hypothetical source towards the scene center
+            // Source is placed opposite to the direction
+            glm::vec3 dir = glm::normalize(light.direction);
+            glm::vec3 source = -dir * 15.0f; 
+            
+            // 1. Draw a small cube at the source
+            model = glm::translate(glm::mat4(1.0f), source);
+            model = glm::scale(model, glm::vec3(0.5f));
+            glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform3fv(gizmo_color_loc, 1, glm::value_ptr(light.color));
+            glBindVertexArray(gizmo_vao);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            
+            // 2. Draw a line representing the direction
+            // We want to transform the line (0,0,0)->(0,0,1) to start at source and point in 'dir'
+            // Rotation from (0,0,1) to 'dir'
+            glm::vec3 from = glm::vec3(0.0f, 0.0f, 1.0f);
+            glm::quat rotation = glm::rotation(from, dir);
+            
+            model = glm::translate(glm::mat4(1.0f), source);
+            model = model * glm::toMat4(rotation);
+            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 5.0f)); // 5 units long ray
+            
+            glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
+            glBindVertexArray(gizmo_line_vao);
+            glDrawArrays(GL_LINES, 0, 2);
         }
-
-        glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform3fv(gizmo_color_loc, 1, glm::value_ptr(light.color));
-        
-        glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 }
 
