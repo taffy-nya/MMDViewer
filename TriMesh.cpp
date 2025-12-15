@@ -192,6 +192,7 @@ void TriMesh::read_pmx(const std::string& filename) {
         file.read(reinterpret_cast<char*>(&mat.shininess), 4);
         file.read(reinterpret_cast<char*>(&mat.ambient_color), 12);
         unsigned char draw_flags; file.read(reinterpret_cast<char*>(&draw_flags), 1);
+        mat.draw_flags = draw_flags; // Store flags
         file.read(reinterpret_cast<char*>(&mat.edge_color), 16);
         file.read(reinterpret_cast<char*>(&mat.edge_size), 4);
         mat.texture_index = read_index(file, texture_index_size);

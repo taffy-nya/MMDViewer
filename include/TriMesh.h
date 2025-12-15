@@ -82,6 +82,7 @@ struct MaterialInfo {
 
     // 几何
     unsigned int num_faces;
+    unsigned char draw_flags; // Added draw flags (0x01 = Double Sided)
 };
 
 class TriMesh

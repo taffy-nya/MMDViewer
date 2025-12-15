@@ -257,13 +257,14 @@ void display() {
     lightSpaceMatrix = lightProjection * lightView;
     
     // Cull front faces for shadow mapping to fix peter panning
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
+    // Removed global culling override to support double-sided materials
+    // glEnable(GL_CULL_FACE);
+    // glCullFace(GL_FRONT);
     
     if (show_stage && stage) stage->draw_shadow(lightSpaceMatrix);
     painter->draw_shadow(lightSpaceMatrix);
     
-    glCullFace(GL_BACK); // Reset culling
+    // glCullFace(GL_BACK); // Reset culling
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // 2. Lighting Pass

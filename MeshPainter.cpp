@@ -312,6 +312,13 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
                 }
             }
             
+            if (mat.draw_flags & 0x01) { // Double Sided
+                 glDisable(GL_CULL_FACE);
+            } else {
+                 glEnable(GL_CULL_FACE);
+                 glCullFace(GL_BACK);
+            }
+
             glDrawElements(GL_TRIANGLES, mat.num_faces, GL_UNSIGNED_INT, (void*)(face_offset*sizeof(unsigned int)));
             face_offset += mat.num_faces;
         }
@@ -350,10 +357,18 @@ void MeshPainter::draw_shadow(const glm::mat4& lightSpaceMatrix) {
         // Draw Submeshes
         unsigned int face_offset = 0;
         for (const auto& mat : entry.mesh->get_materials()) {
+             if (mat.draw_flags & 0x01) { // Double Sided
+                 glDisable(GL_CULL_FACE);
+             } else {
+                 glEnable(GL_CULL_FACE);
+                 glCullFace(GL_BACK);
+             }
              glDrawElements(GL_TRIANGLES, mat.num_faces, GL_UNSIGNED_INT, (void*)(face_offset * sizeof(unsigned int)));
              face_offset += mat.num_faces;
         }
         glBindVertexArray(0);
+        glEnable(GL_CULL_FACE); // Restore default
+        glCullFace(GL_BACK);
     }
 }
 
