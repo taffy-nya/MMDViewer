@@ -302,7 +302,7 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
             // Bind Toon Texture
             glActiveTexture(GL_TEXTURE1);
             if (mat.use_internal_toon) {
-                // Use default white texture for internal toons (since we don't have them loaded)
+                // MMD 会有自带的 toon，这里为了方便直接用一个默认纹理代替
                 glBindTexture(GL_TEXTURE_2D, default_toon_texture);
             } else {
                 if (mat.toon_texture_index >= 0 && mat.toon_texture_index < entry.mesh->get_textures().size()) {

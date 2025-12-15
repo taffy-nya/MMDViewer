@@ -34,7 +34,7 @@ uniform float ambientStrength;
 uniform sampler2D textureSampler;
 uniform bool hasTexture;
 uniform sampler2D toonSampler;
-uniform sampler2D shadowMap;
+uniform sampler2DShadow shadowMap;
 
 float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 {
@@ -49,8 +49,8 @@ float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
     {
         for(int y = -1; y <= 1; ++y)
         {
-            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
-            shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;        
+            float pcfDepth = texture(shadowMap, vec3(projCoords.xy + vec2(x, y) * texelSize, currentDepth - bias)); 
+            shadow += (1.0 - pcfDepth);        
         }    
     }
     shadow /= 9.0;

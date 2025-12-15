@@ -51,7 +51,6 @@ VMDAnimation* animation = nullptr;
 Stage* stage = nullptr;
 
 bool mouse_left_pressed = false, mouse_right_pressed = false, mouse_middle_pressed = false;
-bool needs_redraw = true;
 double rotate_sensitivity = 0.2, translate_sensitivity = 0.05;
 double last_x, last_y;
 
@@ -172,8 +171,10 @@ void init() {
     glGenTextures(1, &depthMap);
     glBindTexture(GL_TEXTURE_2D, depthMap);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -287,7 +288,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
         camera->aspect = (float)width / (float)height;
         // camera->update_camera_vectors(); // Removed: This resets rotation to Euler angles
     }
-    needs_redraw = true; 
 }
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -296,11 +296,9 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     
     if (mouse_left_pressed) { 
         if (camera) camera->orbit(deltaX * rotate_sensitivity * 2.0f, deltaY * rotate_sensitivity * 2.0f);
-        needs_redraw = true; 
     }
     if (mouse_right_pressed) { 
         if (camera) camera->pan(deltaX * translate_sensitivity, deltaY * translate_sensitivity);
-        needs_redraw = true; 
     }
     last_x = xpos; last_y = ypos;
 }
@@ -323,13 +321,11 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     if (ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().WantCaptureMouse) return;
     if (camera) {
         camera->handle_scroll(yoffset);
-        needs_redraw = true;
     }
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-        bool changed = true;
         if (camera) camera->handle_keys(key, action);
         
         switch (key) {
@@ -349,9 +345,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case GLFW_KEY_2: glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); break;
             case GLFW_KEY_R: reset(); break;
             case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GL_TRUE); break;
-            default: changed = false; break;
+            default: break;
         }
-        if (changed) needs_redraw = true;
     }
 }
 
@@ -390,7 +385,6 @@ void reset() {
         mesh->set_translation(glm::vec3(0.0f));
     }
     if (camera) camera->reset();
-    needs_redraw = true;
 }
 
 int main(int argc, char** argv) {

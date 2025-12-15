@@ -67,6 +67,8 @@ add_custom_command(
     COMMENT "Generating embedded shaders header"
 )
 
+# add_compile_options("-DNDEBUG")
+
 # target
 aux_source_directory("./" PROJECT_SOURCES)
 # Ensure the header is generated before building the executable
