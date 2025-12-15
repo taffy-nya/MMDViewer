@@ -19,6 +19,22 @@
 #include <commdlg.h>
 #include <mmsystem.h>
 
+// Helper to convert ANSI (Windows default) to UTF-8 for ImGui
+std::string AnsiToUtf8(const std::string& str) {
+    if (str.empty()) return "";
+    int wlen = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, NULL, 0);
+    if (wlen <= 0) return str;
+    std::vector<wchar_t> wstr(wlen);
+    MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, wstr.data(), wlen);
+    
+    int len = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, NULL, 0, NULL, NULL);
+    if (len <= 0) return str;
+    std::vector<char> utf8(len);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, utf8.data(), len, NULL, NULL);
+    
+    return std::string(utf8.data());
+}
+
 std::string open_file_dialog(const char* filter, GLFWwindow* window) {
     OPENFILENAMEA ofn;
     char fileName[MAX_PATH] = "";
@@ -39,6 +55,7 @@ std::string open_file_dialog(const char* filter, GLFWwindow* window) {
 // --- Global Variables ---
 char pmx_path_buf[256] = "models/taffy/taffy.pmx";
 char vmd_path_buf[256] = "motions/TDA.vmd";
+char stage_path_buf[256] = "Default Grid";
 
 Camera* camera = nullptr;
 MeshPainter* painter = nullptr;
@@ -426,6 +443,7 @@ int main(int argc, char** argv) {
                 }
 
                 if (ImGui::BeginTabItem("Model")) {
+                    ImGui::Text("Current Model: %s", AnsiToUtf8(pmx_path_buf).c_str());
                     if (ImGui::Button("Load Model (.pmx)")) {
                         std::string path = open_file_dialog("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", window);
                         if (!path.empty()) {
@@ -433,6 +451,7 @@ int main(int argc, char** argv) {
                             load_model(pmx_path_buf);
                         }
                     }
+                    ImGui::Text("Current Motion: %s", AnsiToUtf8(vmd_path_buf).c_str());
                     if (ImGui::Button("Load Motion (.vmd)")) {
                         std::string path = open_file_dialog("VMD Files (*.vmd)\0*.vmd\0All Files (*.*)\0*.*\0", window);
                         if (!path.empty()) {
@@ -451,14 +470,17 @@ int main(int argc, char** argv) {
 
                 if (ImGui::BeginTabItem("Stage")) {
                     ImGui::Checkbox("Show Stage", &show_stage);
+                    ImGui::Text("Current Stage: %s", AnsiToUtf8(stage_path_buf).c_str());
                     if (ImGui::Button("Load Stage PMX")) {
                         std::string path = open_file_dialog("PMX Files (*.pmx)\0*.pmx\0All Files (*.*)\0*.*\0", window);
                         if (!path.empty()) {
+                            strncpy(stage_path_buf, path.c_str(), sizeof(stage_path_buf) - 1);
                             stage->load_pmx(path);
                         }
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Reset Stage")) {
+                        strcpy(stage_path_buf, "Default Grid");
                         stage->use_default_grid();
                     }
                     ImGui::EndTabItem();
