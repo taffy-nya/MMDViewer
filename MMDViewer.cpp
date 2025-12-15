@@ -4,6 +4,7 @@
 #include "MeshPainter.h"
 #include "VMDAnimation.h"
 #include "Stage.h"
+#include "Light.h"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -12,11 +13,11 @@
 #include <vector>
 #include <string>
 
-#ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #include <windows.h>
 #include <commdlg.h>
+#include <mmsystem.h>
 
 std::string open_file_dialog_hwnd(const char* filter, HWND hwnd) {
     OPENFILENAMEA ofn;
@@ -38,7 +39,6 @@ std::string open_file_dialog_hwnd(const char* filter, HWND hwnd) {
 std::string open_file_dialog(const char* filter, GLFWwindow* window) {
     return open_file_dialog_hwnd(filter, glfwGetWin32Window(window));
 }
-#endif
 
 // --- Global Variables ---
 char pmx_path_buf[256] = "models/taffy/taffy.pmx";
@@ -54,7 +54,16 @@ bool mouse_left_pressed = false, mouse_right_pressed = false, mouse_middle_press
 bool needs_redraw = true;
 double rotate_sensitivity = 0.2, translate_sensitivity = 0.02;
 double last_x, last_y;
-glm::vec3 light_pos(0.0f, 50.0f, 50.0f);
+
+// Lighting
+std::vector<Light> lights;
+glm::vec3 ambient_color(1.0f, 1.0f, 1.0f);
+float ambient_strength = 0.4f;
+
+// Shadow Mapping
+GLuint depthMapFBO;
+GLuint depthMap;
+const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
 
 // Animation timing
 float last_frame_time = 0.0f;
@@ -62,6 +71,10 @@ float current_frame = 0.0f;
 bool is_playing = true;
 bool show_stage = true;
 bool enable_motion = true;
+
+// FPS Limiter
+int target_fps = 60;
+bool limit_fps = true;
 
 // --- Function Declarations ---
 void framebuffer_size_callback(GLFWwindow* w, int width, int height);
@@ -78,7 +91,6 @@ void load_model(const std::string& path);
 void load_motion(const std::string& path);
 
 // --- Native Menu ---
-#ifdef _WIN32
 // Menu IDs
 #define ID_FILE_SELECT_MODEL 1001
 #define ID_FILE_SELECT_MOTION 1002
@@ -134,7 +146,6 @@ void CreateNativeMenu(GLFWwindow* window) {
     SetWindowPos(hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top + 1, SWP_NOMOVE | SWP_NOZORDER);
     SetWindowPos(hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER);
 }
-#endif
 
 // --- Initialization ---
 void init() {
@@ -142,8 +153,37 @@ void init() {
     painter = new MeshPainter();
     stage = new Stage(100.0f, 20);
     
+    // Initialize Lights
+    if (lights.empty()) {
+        Light mainLight;
+        mainLight.type = LIGHT_DIRECTIONAL;
+        mainLight.direction = glm::vec3(-0.5f, -1.0f, -0.5f);
+        mainLight.color = glm::vec3(1.0f);
+        mainLight.intensity = 1.0f;
+        lights.push_back(mainLight);
+    }
+
     load_model(pmx_path_buf);
     load_motion(vmd_path_buf);
+
+    // Configure Shadow Map FBO
+    glGenFramebuffers(1, &depthMapFBO);
+    
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glClearColor(0.5f, 0.6f, 0.7f, 1.0f);
     glEnable(GL_DEPTH_TEST);
@@ -190,9 +230,51 @@ void load_motion(const std::string& path) {
 
 // --- Render Loop ---
 void display() {
+    // 1. Shadow Pass
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    
+    glm::mat4 lightProjection, lightView;
+    glm::mat4 lightSpaceMatrix;
+    float near_plane = 1.0f, far_plane = 100.0f;
+    
+    // Use the first light as the shadow caster
+    glm::vec3 lightPos = glm::vec3(-2.0f, 4.0f, -1.0f); // Default
+    if (!lights.empty()) {
+        if (lights[0].type == LIGHT_DIRECTIONAL) {
+             lightPos = -lights[0].direction * 20.0f; // Simulate a position for directional light
+             lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
+        } else {
+             lightPos = lights[0].position;
+             lightProjection = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
+        }
+    } else {
+         lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
+    }
+    
+    lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+    lightSpaceMatrix = lightProjection * lightView;
+    
+    // Cull front faces for shadow mapping to fix peter panning
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+    
+    if (show_stage && stage) stage->draw_shadow(lightSpaceMatrix);
+    painter->draw_shadow(lightSpaceMatrix);
+    
+    glCullFace(GL_BACK); // Reset culling
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // 2. Lighting Pass
+    int width, height;
+    glfwGetFramebufferSize(glfwGetCurrentContext(), &width, &height);
+    glViewport(0, 0, width, height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if (show_stage && stage) stage->draw(camera);
-    painter->draw_meshes(camera, light_pos);
+    
+    if (show_stage && stage) stage->draw(camera, lights, ambient_color, ambient_strength, depthMap, lightSpaceMatrix);
+    painter->draw_meshes(camera, lights, ambient_color, ambient_strength, depthMap, lightSpaceMatrix);
+    painter->draw_light_gizmos(camera, lights);
 }
 
 // --- Callbacks ---
@@ -311,14 +393,12 @@ void reset() {
 }
 
 int main(int argc, char** argv) {
+    timeBeginPeriod(1);
+
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
     GLFWwindow* window = glfwCreateWindow(1920, 1080, "MMD Model Viewer", NULL, NULL);
     if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -326,6 +406,7 @@ int main(int argc, char** argv) {
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(0); // Disable VSync to allow manual FPS limiting
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetKeyCallback(window, key_callback);
@@ -340,15 +421,9 @@ int main(int argc, char** argv) {
 
     init();
 
-#ifdef _WIN32
     CreateNativeMenu(window);
     // Process pending events (like WM_SIZE) to ensure GLFW updates its window size/content scale
     glfwPollEvents();
-#endif
-
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    framebuffer_size_callback(window, width, height);
 
     print_help();
 
@@ -410,6 +485,61 @@ int main(int argc, char** argv) {
                 ImGui::Checkbox("Play Animation", &is_playing);
             }
 
+            ImGui::Separator();
+            ImGui::Text("Performance");
+            ImGui::Checkbox("Limit FPS", &limit_fps);
+            if (limit_fps) {
+                ImGui::SliderInt("Target FPS", &target_fps, 10, 240);
+            }
+
+            ImGui::Separator();
+            ImGui::Text("Lighting");
+            ImGui::ColorEdit3("Ambient Color", (float*)&ambient_color);
+            ImGui::SliderFloat("Ambient Strength", &ambient_strength, 0.0f, 1.0f);
+
+            if (ImGui::CollapsingHeader("Lights")) {
+                if (ImGui::Button("Add Point Light")) {
+                    if (lights.size() < 16) {
+                        Light l;
+                        l.type = LIGHT_POINT;
+                        l.position = glm::vec3(0.0f, 10.0f, 0.0f);
+                        lights.push_back(l);
+                    }
+                }
+                
+                for (int i = 0; i < lights.size(); ++i) {
+                    ImGui::PushID(i);
+                    if (ImGui::TreeNode(("Light " + std::to_string(i)).c_str())) {
+                        ImGui::Checkbox("Enabled", &lights[i].enabled);
+                        const char* types[] = { "Directional", "Point" };
+                        ImGui::Combo("Type", &lights[i].type, types, IM_ARRAYSIZE(types));
+                        
+                        if (lights[i].type == LIGHT_DIRECTIONAL) {
+                            ImGui::DragFloat3("Direction", (float*)&lights[i].direction, 0.1f);
+                        } else {
+                            ImGui::DragFloat3("Position", (float*)&lights[i].position, 0.5f);
+                            ImGui::DragFloat("Constant", &lights[i].constant, 0.01f, 0.0f, 10.0f);
+                            ImGui::DragFloat("Linear", &lights[i].linear, 0.001f, 0.0f, 1.0f);
+                            ImGui::DragFloat("Quadratic", &lights[i].quadratic, 0.0001f, 0.0f, 1.0f);
+                        }
+                        
+                        ImGui::ColorEdit3("Color", (float*)&lights[i].color);
+                        ImGui::SliderFloat("Intensity", &lights[i].intensity, 0.0f, 5.0f);
+                        
+                        if (ImGui::Button("Remove")) {
+                            lights.erase(lights.begin() + i);
+                            ImGui::TreePop();
+                            ImGui::PopID();
+                            i--; // Adjust index
+                            continue; 
+                        }
+                        
+                        ImGui::TreePop();
+                    }
+                    ImGui::PopID();
+                }
+            }
+
             ImGui::End();
         }
 
@@ -420,9 +550,26 @@ int main(int argc, char** argv) {
         glfwSwapBuffers(window);
         
         glfwPollEvents();
+
+        // FPS Limiter
+        if (limit_fps && target_fps > 0) {
+            float frameTime = (float)glfwGetTime() - currentTime;
+            float targetFrameTime = 1.0f / (float)target_fps;
+            if (frameTime < targetFrameTime) {
+                float sleepTime = targetFrameTime - frameTime;
+                if (sleepTime > 0.002f) { // Sleep if more than 2ms remaining
+                     Sleep((DWORD)(sleepTime * 1000.0f - 1.0f)); 
+                }
+                // Busy wait for the rest
+                while ((float)glfwGetTime() - currentTime < targetFrameTime) {
+                    // spin
+                }
+            }
+        }
     }
 
     clean_up();
     glfwTerminate();
+    timeEndPeriod(1);
     return 0;
 }

@@ -2,9 +2,7 @@
 #define STBI_FAILURE_USERMSG
 #include "stb_image.h"
 
-#ifdef _WIN32
 #include <windows.h>
-#endif
 
 #include "Angel.h"
 #include "TriMesh.h"
@@ -438,7 +436,6 @@ void TriMesh::reset_pose() {
 }
 
 
-#ifdef _WIN32
 static std::wstring to_wstring(const std::string& str, UINT codepage) {
     if (str.empty()) return std::wstring();
     int size_needed = MultiByteToWideChar(codepage, 0, &str[0], (int)str.size(), NULL, 0);
@@ -446,7 +443,6 @@ static std::wstring to_wstring(const std::string& str, UINT codepage) {
     MultiByteToWideChar(codepage, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
     return wstrTo;
 }
-#endif
 
 void TriMesh::load_opengl_textures(const std::string& modelBasePath) {
     stbi_set_flip_vertically_on_load(true);
@@ -458,7 +454,6 @@ void TriMesh::load_opengl_textures(const std::string& modelBasePath) {
         std::string reason = "Unknown error";
 
         // 避免编码问题，用 UTF-8 读取路径
-#ifdef _WIN32
         // modelBasePath is likely ANSI (from GetOpenFileNameA or argv)
         std::wstring wBasePath = to_wstring(modelBasePath, CP_ACP);
         // texInfo.path is UTF-8 (from PMX loader)
@@ -476,12 +471,6 @@ void TriMesh::load_opengl_textures(const std::string& modelBasePath) {
         } else {
             reason = "Unable to open file";
         }
-#else
-        std::string fullPath = modelBasePath + texInfo.path;
-        for (char& c : fullPath) if (c == '\\') c = '/';
-        data = stbi_load(fullPath.c_str(), &width, &height, &nrChannels, 0);
-        if (!data) reason = stbi_failure_reason();
-#endif
 
         if (data && width > 0 && height > 0) {
             GLenum format = GL_RGB;

@@ -5,13 +5,10 @@
 #include <algorithm>
 #include <cstring>
 
-#ifdef _WIN32
 #include <windows.h>
-#endif
 
 // Helper to convert Shift-JIS to UTF-8
 std::string shift_jis_to_utf8(const std::string& sjis) {
-#ifdef _WIN32
     int w_len = MultiByteToWideChar(932, 0, sjis.c_str(), -1, NULL, 0); // 932 is Shift-JIS
     if (w_len == 0) return sjis;
     std::vector<wchar_t> w_str(w_len);
@@ -22,9 +19,6 @@ std::string shift_jis_to_utf8(const std::string& sjis) {
     std::vector<char> buffer(utf8_len);
     WideCharToMultiByte(CP_UTF8, 0, w_str.data(), -1, buffer.data(), utf8_len, NULL, NULL);
     return std::string(buffer.data());
-#else
-    return sjis; // Non-Windows fallback (might need iconv)
-#endif
 }
 
 VMDAnimation::VMDAnimation() {}

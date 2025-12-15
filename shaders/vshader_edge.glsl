@@ -12,6 +12,9 @@ uniform float edge_size;
 
 uniform samplerBuffer boneMatrices;
 
+out vec3 FragPos;
+out vec3 Normal;
+
 mat4 getBoneMatrix(int index) {
     int baseIndex = index * 4;
     vec4 c1 = texelFetch(boneMatrices, baseIndex + 0);
@@ -47,5 +50,8 @@ void main()
     // Extrude along normal
     vec3 pos3 = pos.xyz + norm * edge_size;
     
+    FragPos = vec3(model * vec4(pos3, 1.0));
+    Normal = mat3(transpose(inverse(model))) * norm;
+
     gl_Position = projection * view * model * vec4(pos3, 1.0);
 }

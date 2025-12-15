@@ -76,3 +76,4 @@ target_include_directories(MMDViewer PRIVATE include ${imgui_SOURCE_DIR} ${imgui
 # dependency
 target_link_libraries(MMDViewer PRIVATE glfw)
 target_link_libraries(MMDViewer PRIVATE glm::glm)
+target_link_libraries(MMDViewer PRIVATE winmm)
