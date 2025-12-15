@@ -83,6 +83,7 @@ float current_frame = 0.0f;
 bool is_playing = true;
 bool show_stage = true;
 bool enable_motion = true;
+bool show_light_gizmos = true;
 
 // FPS Limiter
 int target_fps = 60;
@@ -232,7 +233,7 @@ void display() {
     
     if (show_stage && stage) stage->draw(camera, lights, ambient_color, ambient_strength, depthMap, lightSpaceMatrix);
     painter->draw_meshes(camera, lights, ambient_color, ambient_strength, depthMap, lightSpaceMatrix);
-    painter->draw_light_gizmos(camera, lights);
+    if (show_light_gizmos) painter->draw_light_gizmos(camera, lights);
 }
 
 // --- Callbacks ---
@@ -439,6 +440,11 @@ int main(int argc, char** argv) {
                     if (limit_fps) {
                         ImGui::SliderInt("Target FPS", &target_fps, 10, 240);
                     }
+                    ImGui::Separator();
+                    ImGui::Text("Camera");
+                    if (ImGui::Button("Reset Camera")) {
+                        if (camera) camera->reset();
+                    }
                     ImGui::EndTabItem();
                 }
 
@@ -459,6 +465,47 @@ int main(int argc, char** argv) {
                             load_motion(vmd_path_buf);
                         }
                     }
+                    
+                    ImGui::Separator();
+                    ImGui::Text("Transform");
+                    if (mesh) {
+                        // Position
+                        glm::vec3 pos = mesh->get_translation();
+                        if (ImGui::DragFloat3("##Pos", (float*)&pos, 0.1f)) {
+                            mesh->set_translation(pos);
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Reset##Pos")) {
+                            mesh->set_translation(glm::vec3(0.0f));
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text("Position");
+
+                        // Rotation
+                        glm::vec3 rot = mesh->get_rotation();
+                        if (ImGui::DragFloat3("##Rot", (float*)&rot, 1.0f)) {
+                            mesh->set_rotation(rot);
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Reset##Rot")) {
+                            mesh->set_rotation(glm::vec3(0.0f));
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text("Rotation");
+
+                        // Scale
+                        glm::vec3 scale = mesh->get_scale();
+                        if (ImGui::DragFloat3("##Scale", (float*)&scale, 0.01f)) {
+                            mesh->set_scale(scale);
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Reset##Scale")) {
+                            mesh->set_scale(glm::vec3(1.0f));
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text("Scale");
+                    }
+
                     ImGui::Separator();
                     ImGui::Text("Animation");
                     ImGui::Checkbox("Enable Motion", &enable_motion);
@@ -487,6 +534,7 @@ int main(int argc, char** argv) {
                 }
 
                 if (ImGui::BeginTabItem("Lighting")) {
+                    ImGui::Checkbox("Show Light Gizmos", &show_light_gizmos);
                     ImGui::Text("Ambient Light");
                     ImGui::ColorEdit3("Color", (float*)&ambient_color);
                     ImGui::SliderFloat("Strength", &ambient_strength, 0.0f, 1.0f);
