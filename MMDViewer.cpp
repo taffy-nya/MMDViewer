@@ -70,7 +70,7 @@ double last_x, last_y;
 // Lighting
 std::vector<Light> lights;
 glm::vec3 ambient_color(1.0f, 1.0f, 1.0f);
-float ambient_strength = 0.4f;
+float ambient_strength = 1.0f;
 
 // Shadow Mapping
 GLuint depthMapFBO;
@@ -82,8 +82,11 @@ float last_frame_time = 0.0f;
 float current_frame = 0.0f;
 bool is_playing = true;
 bool show_stage = true;
-bool enable_motion = true;
+bool enable_motion = false;
 bool show_light_gizmos = true;
+bool show_skeleton = false;
+bool manual_bone_control = false;
+int selected_bone_index = -1;
 
 // FPS Limiter
 int target_fps = 60;
@@ -109,15 +112,15 @@ void init() {
     painter = new MeshPainter();
     stage = new Stage(100.0f, 20);
     
-    // Initialize Lights
-    if (lights.empty()) {
-        Light mainLight;
-        mainLight.type = LIGHT_DIRECTIONAL;
-        mainLight.direction = glm::vec3(-0.5f, -1.0f, -0.5f);
-        mainLight.color = glm::vec3(1.0f);
-        mainLight.intensity = 0.5f;
-        lights.push_back(mainLight);
-    }
+    // 初始添加一个平行光
+    // if (lights.empty()) {
+    //     Light mainLight;
+    //     mainLight.type = LIGHT_DIRECTIONAL;
+    //     mainLight.direction = glm::vec3(-0.5f, -1.0f, -0.5f);
+    //     mainLight.color = glm::vec3(1.0f);
+    //     mainLight.intensity = 0.5f;
+    //     lights.push_back(mainLight);
+    // }
 
     load_model(pmx_path_buf);
     load_motion(vmd_path_buf);
@@ -234,6 +237,7 @@ void display() {
     if (show_stage && stage) stage->draw(camera, lights, ambient_color, ambient_strength, depthMap, lightSpaceMatrix);
     painter->draw_meshes(camera, lights, ambient_color, ambient_strength, depthMap, lightSpaceMatrix);
     if (show_light_gizmos) painter->draw_light_gizmos(camera, lights);
+    if (show_skeleton) painter->draw_skeleton(camera, selected_bone_index);
 }
 
 // --- Callbacks ---
@@ -404,7 +408,7 @@ int main(int argc, char** argv) {
         float deltaTime = currentTime - last_frame_time;
         last_frame_time = currentTime;
 
-        if (enable_motion) {
+        if (enable_motion && !manual_bone_control) {
             if (is_playing && animation) {
                 // VMD 标准帧率为 30 FPS
                 current_frame += deltaTime * 30.0f; 
@@ -412,14 +416,17 @@ int main(int argc, char** argv) {
                     current_frame = 0.0f;
                 }
                 animation->update(current_frame, mesh);
-                mesh->update_bone_matrices();
             }
-        } else {
-            // 不启用动画时，重置模型为 T-Pose
+        } else if (!enable_motion && !manual_bone_control) {
+            // 不启用动画且非手动控制时，重置模型为 T-Pose
             if (mesh) {
                 mesh->reset_pose();
-                mesh->update_bone_matrices();
             }
+        }
+        
+        // Always update matrices if mesh exists
+        if (mesh) {
+            mesh->update_bone_matrices();
         }
 
         // Start the Dear ImGui frame
@@ -512,6 +519,77 @@ int main(int argc, char** argv) {
                     if (enable_motion) {
                         ImGui::Checkbox("Play Animation", &is_playing);
                     }
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Skeleton")) {
+                    ImGui::Checkbox("Show Skeleton", &show_skeleton);
+                    ImGui::Checkbox("Manual Control", &manual_bone_control);
+                    if (manual_bone_control) {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4(1, 1, 0, 1), "(Animation Paused)");
+                    }
+
+                    ImGui::Separator();
+                    
+                    if (mesh) {
+                        auto& bones = mesh->get_bones();
+                        
+                        // Left pane: Bone List
+                        ImGui::BeginChild("BoneList", ImVec2(150, 0), true);
+                        for (int i = 0; i < bones.size(); ++i) {
+                            std::string label = std::to_string(i) + ": " + bones[i].name;
+                            if (ImGui::Selectable(label.c_str(), selected_bone_index == i)) {
+                                selected_bone_index = i;
+                            }
+                        }
+                        ImGui::EndChild();
+                        
+                        ImGui::SameLine();
+                        
+                        // Right pane: Bone Details
+                        ImGui::BeginGroup();
+                        if (selected_bone_index >= 0 && selected_bone_index < bones.size()) {
+                            PMXBone& bone = bones[selected_bone_index];
+                            ImGui::Text("Bone: %s", bone.name.c_str());
+                            ImGui::Text("ID: %d", selected_bone_index);
+                            ImGui::Text("Parent: %d", bone.parent_index);
+                            
+                            ImGui::Separator();
+                            
+                            if (manual_bone_control) {
+                                // Translation
+                                ImGui::Text("Local Translation");
+                                if (ImGui::DragFloat3("##BoneTrans", (float*)&bone.local_translation, 0.01f)) {
+                                    // Modified
+                                }
+                                if (ImGui::Button("Reset Trans")) {
+                                    bone.local_translation = glm::vec3(0.0f);
+                                }
+                                
+                                // Rotation
+                                ImGui::Text("Local Rotation");
+                                glm::vec3 euler = glm::degrees(glm::eulerAngles(bone.local_rotation));
+                                if (ImGui::DragFloat3("##BoneRot", (float*)&euler, 1.0f)) {
+                                    bone.local_rotation = glm::quat(glm::radians(euler));
+                                }
+                                if (ImGui::Button("Reset Rot")) {
+                                    bone.local_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+                                }
+                            } else {
+                                ImGui::TextColored(ImVec4(1, 0, 0, 1), "Enable Manual Control to edit");
+                                ImGui::Text("Translation: %.2f, %.2f, %.2f", bone.local_translation.x, bone.local_translation.y, bone.local_translation.z);
+                                glm::vec3 euler = glm::degrees(glm::eulerAngles(bone.local_rotation));
+                                ImGui::Text("Rotation: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
+                            }
+                        } else {
+                            ImGui::Text("Select a bone to edit");
+                        }
+                        ImGui::EndGroup();
+                    } else {
+                        ImGui::Text("No model loaded");
+                    }
+                    
                     ImGui::EndTabItem();
                 }
 

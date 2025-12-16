@@ -480,3 +480,84 @@ void MeshPainter::draw_light_gizmos(Camera* camera, const std::vector<Light>& li
     }
 }
 
+void MeshPainter::draw_skeleton(Camera* camera, int selected_bone_index) {
+    if (gizmo_program == 0) return;
+
+    glUseProgram(gizmo_program);
+    
+    glm::mat4 view = camera->get_view_matrix();
+    glm::mat4 projection = camera->get_projection_matrix();
+    
+    glUniformMatrix4fv(gizmo_view_loc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(gizmo_proj_loc, 1, GL_FALSE, glm::value_ptr(projection));
+
+    glBindVertexArray(gizmo_line_vao);
+
+    for (auto& entry : meshes) {
+        TriMesh* mesh = entry.mesh;
+        glm::mat4 modelMatrix = mesh->get_model_matrix();
+        auto& bones = mesh->get_bones();
+
+        for (int i = 0; i < bones.size(); ++i) {
+            PMXBone& bone = bones[i];
+            if (bone.parent_index == -1) continue;
+
+            PMXBone& parent = bones[bone.parent_index];
+            
+            glm::vec3 start = glm::vec3(parent.global_transform[3]);
+            glm::vec3 end = glm::vec3(bone.global_transform[3]);
+
+            // Apply model matrix to convert from Model Space to World Space
+            start = glm::vec3(modelMatrix * glm::vec4(start, 1.0f));
+            end = glm::vec3(modelMatrix * glm::vec4(end, 1.0f));
+
+            glm::vec3 dir = end - start;
+            float len = glm::length(dir);
+            if (len < 0.001f) continue;
+
+            glm::vec3 direction = glm::normalize(dir);
+            
+            // Rotation from (0,0,1) to direction
+            glm::vec3 from = glm::vec3(0.0f, 0.0f, 1.0f);
+            glm::quat rotation = glm::rotation(from, direction);
+            
+            glm::mat4 model = glm::translate(glm::mat4(1.0f), start);
+            model = model * glm::toMat4(rotation);
+            model = glm::scale(model, glm::vec3(1.0f, 1.0f, len));
+
+            glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
+            
+            // Color: Highlight selected bone connection (parent -> selected)
+            if (i == selected_bone_index) {
+                glUniform3f(gizmo_color_loc, 1.0f, 1.0f, 0.0f); // Yellow for selected
+            } else {
+                glUniform3f(gizmo_color_loc, 0.0f, 1.0f, 0.0f); // Green for others
+            }
+            
+            glDrawArrays(GL_LINES, 0, 2);
+        }
+        
+        // Draw points at joints
+        glBindVertexArray(gizmo_vao); // Cube VAO
+        for (int i = 0; i < bones.size(); ++i) {
+            PMXBone& bone = bones[i];
+            glm::vec3 pos = glm::vec3(bone.global_transform[3]);
+            pos = glm::vec3(modelMatrix * glm::vec4(pos, 1.0f));
+            
+            glm::mat4 model = glm::translate(glm::mat4(1.0f), pos);
+            model = glm::scale(model, glm::vec3(0.1f)); // Small cube
+            
+            glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
+            
+            if (i == selected_bone_index) {
+                glUniform3f(gizmo_color_loc, 1.0f, 0.0f, 0.0f); // Red for selected joint
+            } else {
+                glUniform3f(gizmo_color_loc, 0.0f, 0.0f, 1.0f); // Blue for others
+            }
+            
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+        glBindVertexArray(gizmo_line_vao); // Switch back for next lines
+    }
+}
+

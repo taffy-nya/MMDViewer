@@ -65,6 +65,7 @@ public:
     void draw_meshes(Camera* camera, const std::vector<Light>& lights, const glm::vec3& ambientColor, float ambientStrength, GLuint shadowMap, const glm::mat4& lightSpaceMatrix, float brightness = 1.0f);
     void draw_shadow(const glm::mat4& lightSpaceMatrix);
     void draw_light_gizmos(Camera* camera, const std::vector<Light>& lights);
+    void draw_skeleton(Camera* camera, int selected_bone_index = -1);
     void clean_up();
 
 private:
