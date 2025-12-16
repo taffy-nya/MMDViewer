@@ -483,6 +483,10 @@ void MeshPainter::draw_light_gizmos(Camera* camera, const std::vector<Light>& li
 void MeshPainter::draw_skeleton(Camera* camera, int selected_bone_index) {
     if (gizmo_program == 0) return;
 
+    // 关闭深度测试，使得骨骼不被模型遮挡
+    GLboolean depthTestEnabled = glIsEnabled(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
+
     glUseProgram(gizmo_program);
     
     glm::mat4 view = camera->get_view_matrix();
@@ -558,6 +562,11 @@ void MeshPainter::draw_skeleton(Camera* camera, int selected_bone_index) {
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
         glBindVertexArray(gizmo_line_vao); // Switch back for next lines
+    }
+
+    // Restore depth test state
+    if (depthTestEnabled) {
+        glEnable(GL_DEPTH_TEST);
     }
 }
 

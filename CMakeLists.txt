@@ -57,6 +57,14 @@ set(IMGUI_SOURCES
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
+# imguizmo
+FetchContent_Declare(
+  imguizmo
+  GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(imguizmo)
+
 # Embedded Shaders Generation
 find_package(Python3 REQUIRED)
 add_custom_command(
@@ -72,8 +80,8 @@ add_custom_command(
 # target
 aux_source_directory("./" PROJECT_SOURCES)
 # Ensure the header is generated before building the executable
-add_executable(MMDViewer ${PROJECT_SOURCES} ${IMGUI_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/include/EmbeddedShaders.h)
-target_include_directories(MMDViewer PRIVATE include ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${stb_SOURCE_DIR})
+add_executable(MMDViewer ${PROJECT_SOURCES} ${IMGUI_SOURCES} ${imguizmo_SOURCE_DIR}/ImGuizmo.cpp ${CMAKE_CURRENT_SOURCE_DIR}/include/EmbeddedShaders.h)
+target_include_directories(MMDViewer PRIVATE include ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${stb_SOURCE_DIR} ${imguizmo_SOURCE_DIR})
 
 # dependency
 target_link_libraries(MMDViewer PRIVATE glfw)

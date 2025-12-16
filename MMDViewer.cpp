@@ -9,9 +9,13 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "ImGuizmo.h"
 
 #include <vector>
 #include <string>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/quaternion.hpp> // Added for rotation and toMat4
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
@@ -87,6 +91,9 @@ bool show_light_gizmos = true;
 bool show_skeleton = false;
 bool manual_bone_control = false;
 int selected_bone_index = -1;
+int selected_light_index = -1;
+ImGuizmo::OPERATION current_gizmo_operation = ImGuizmo::ROTATE;
+ImGuizmo::MODE current_gizmo_mode = ImGuizmo::LOCAL;
 
 // FPS Limiter
 int target_fps = 60;
@@ -433,6 +440,7 @@ int main(int argc, char** argv) {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        ImGuizmo::BeginFrame();
 
         {
             ImGui::Begin("MMD Viewer Controls");
@@ -558,6 +566,11 @@ int main(int argc, char** argv) {
                             ImGui::Separator();
                             
                             if (manual_bone_control) {
+                                // Gizmo Operation Selection
+                                if (ImGui::RadioButton("Rotate", current_gizmo_operation == ImGuizmo::ROTATE)) current_gizmo_operation = ImGuizmo::ROTATE;
+                                ImGui::SameLine();
+                                if (ImGui::RadioButton("Translate", current_gizmo_operation == ImGuizmo::TRANSLATE)) current_gizmo_operation = ImGuizmo::TRANSLATE;
+                                
                                 // Translation
                                 ImGui::Text("Local Translation");
                                 if (ImGui::DragFloat3("##BoneTrans", (float*)&bone.local_translation, 0.01f)) {
@@ -576,6 +589,8 @@ int main(int argc, char** argv) {
                                 if (ImGui::Button("Reset Rot")) {
                                     bone.local_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
                                 }
+
+                                // ImGuizmo Logic moved to end of frame
                             } else {
                                 ImGui::TextColored(ImVec4(1, 0, 0, 1), "Enable Manual Control to edit");
                                 ImGui::Text("Translation: %.2f, %.2f, %.2f", bone.local_translation.x, bone.local_translation.y, bone.local_translation.z);
@@ -629,15 +644,57 @@ int main(int argc, char** argv) {
                     }
                     
                     ImGui::Separator();
+                    
+                    if (selected_light_index != -1) {
+                        if (ImGui::Button("Deselect Light")) {
+                            selected_light_index = -1;
+                        }
+                    }
+
                     for (int i = 0; i < lights.size(); ++i) {
                         ImGui::PushID(i);
-                        if (ImGui::TreeNode(("Light " + std::to_string(i)).c_str())) {
+                        // Highlight selected light in tree
+                        bool isSelected = (selected_light_index == i);
+                        ImGuiTreeNodeFlags flags = isSelected ? ImGuiTreeNodeFlags_Selected : 0;
+                        bool isOpen = ImGui::TreeNodeEx(("Light " + std::to_string(i)).c_str(), flags);
+                        
+                        if (ImGui::IsItemClicked()) {
+                            selected_light_index = i;
+                            selected_bone_index = -1;
+                        }
+
+                        if (isOpen) {
                             ImGui::Checkbox("Enabled", &lights[i].enabled);
                             const char* types[] = { "Directional", "Point" };
                             ImGui::Combo("Type", &lights[i].type, types, IM_ARRAYSIZE(types));
                             
                             if (lights[i].type == LIGHT_DIRECTIONAL) {
-                                ImGui::DragFloat3("Direction", (float*)&lights[i].direction, 0.1f);
+                                // Convert direction to Euler angles (Pitch/Yaw) for easier editing
+                                // Direction is usually normalized.
+                                // Pitch: rotation around X, Yaw: rotation around Y
+                                // We can use asin/atan2 to get angles.
+                                // Assuming direction is (x, y, z)
+                                // Pitch = asin(-y)
+                                // Yaw = atan2(x, z)
+                                
+                                float pitch = glm::degrees(asin(glm::clamp(-lights[i].direction.y, -1.0f, 1.0f)));
+                                float yaw = glm::degrees(atan2(lights[i].direction.x, lights[i].direction.z));
+                                
+                                bool changed = false;
+                                changed |= ImGui::DragFloat("Pitch", &pitch, 1.0f, -89.0f, 89.0f);
+                                changed |= ImGui::DragFloat("Yaw", &yaw, 1.0f, -180.0f, 180.0f);
+                                
+                                if (changed) {
+                                    float rPitch = glm::radians(pitch);
+                                    float rYaw = glm::radians(yaw);
+                                    lights[i].direction.x = sin(rYaw) * cos(rPitch);
+                                    lights[i].direction.y = -sin(rPitch);
+                                    lights[i].direction.z = cos(rYaw) * cos(rPitch);
+                                    lights[i].direction = glm::normalize(lights[i].direction);
+                                }
+                                
+                                ImGui::TextDisabled("Raw Dir: (%.2f, %.2f, %.2f)", lights[i].direction.x, lights[i].direction.y, lights[i].direction.z);
+
                             } else {
                                 ImGui::DragFloat3("Position", (float*)&lights[i].position, 0.5f);
                                 ImGui::DragFloat("Constant", &lights[i].constant, 0.01f, 0.0f, 10.0f);
@@ -650,6 +707,7 @@ int main(int argc, char** argv) {
                             
                             if (ImGui::Button("Remove")) {
                                 lights.erase(lights.begin() + i);
+                                if (selected_light_index == i) selected_light_index = -1;
                                 ImGui::TreePop();
                                 ImGui::PopID();
                                 i--; // Adjust index
@@ -667,6 +725,107 @@ int main(int argc, char** argv) {
             }
 
             ImGui::End();
+        }
+
+        // ImGuizmo Logic - Moved outside of any ImGui window to avoid coordinate system inheritance issues
+        if (camera) {
+            ImGuizmo::SetOrthographic(false);
+            ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList());
+            ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+
+            glm::mat4 view = camera->get_view_matrix();
+            glm::mat4 projection = camera->get_projection_matrix();
+
+            // 1. Bone Control
+            if (manual_bone_control && mesh && selected_bone_index >= 0) {
+                // Deselect light if bone is selected (handled in UI logic, but good to be safe)
+                selected_light_index = -1;
+
+                auto& bones = mesh->get_bones();
+                if (selected_bone_index < bones.size()) {
+                    PMXBone& bone = bones[selected_bone_index];
+                    glm::mat4 modelMatrix = mesh->get_model_matrix();
+                    glm::mat4 globalTransform = modelMatrix * bone.global_transform;
+
+                    if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), 
+                        current_gizmo_operation, current_gizmo_mode, glm::value_ptr(globalTransform))) {
+                        
+                        glm::mat4 parentGlobal = glm::mat4(1.0f);
+                        if (bone.parent_index != -1) {
+                            parentGlobal = bones[bone.parent_index].global_transform;
+                        }
+                        
+                        glm::mat4 parentWorld = modelMatrix * parentGlobal;
+                        glm::mat4 localTransform = glm::inverse(parentWorld) * globalTransform;
+                        
+                        glm::vec3 scale;
+                        glm::quat rotation;
+                        glm::vec3 translation;
+                        glm::vec3 skew;
+                        glm::vec4 perspective;
+                        glm::decompose(localTransform, scale, rotation, translation, skew, perspective);
+                        
+                        // Calculate relative position (Bind Pose offset) to correct translation
+                        glm::vec3 parentPos = glm::vec3(0.0f);
+                        if (bone.parent_index != -1) {
+                            parentPos = bones[bone.parent_index].position;
+                        }
+                        glm::vec3 relativePos = bone.position - parentPos;
+
+                        bone.local_translation = translation - relativePos;
+                        bone.local_rotation = rotation;
+                    }
+                }
+            }
+            
+            // 2. Light Control
+            if (show_light_gizmos && selected_light_index >= 0 && selected_light_index < lights.size()) {
+                Light& light = lights[selected_light_index];
+                glm::mat4 transform = glm::mat4(1.0f);
+                
+                if (light.type == LIGHT_POINT) {
+                    transform = glm::translate(transform, light.position);
+                } else {
+                    // For directional light, visualize it at a fixed distance or center
+                    // But direction is a vector, not a point. 
+                    // We can visualize rotation.
+                    // Let's place the gizmo at (0, 10, 0) or some visible place, and only allow rotation.
+                    glm::vec3 displayPos = glm::vec3(0.0f, 10.0f, 0.0f); 
+                    transform = glm::translate(transform, displayPos);
+                    
+                    // Create rotation from default direction (0, -1, 0) or (0,0,-1) to light.direction
+                    // Assuming light.direction is normalized
+                    glm::vec3 defaultDir = glm::vec3(0.0f, -1.0f, 0.0f); // Standard down
+                    // Actually, let's just use LookAt logic or Quat rotation
+                    // But simpler: just use the rotation part of the matrix
+                    // We need to construct a rotation matrix that points -Y to light.direction
+                    // Or just use the gizmo to get a new rotation and extract direction.
+                    
+                    // Let's use a helper:
+                    // We want to edit 'light.direction'.
+                    // Gizmo gives us a rotation.
+                    // We can represent the current direction as a rotation from (0, -1, 0).
+                    glm::quat q = glm::rotation(glm::vec3(0.0f, -1.0f, 0.0f), glm::normalize(light.direction));
+                    transform = transform * glm::toMat4(q);
+                }
+
+                ImGuizmo::OPERATION op = ImGuizmo::TRANSLATE;
+                if (light.type == LIGHT_DIRECTIONAL) op = ImGuizmo::ROTATE;
+                
+                if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), 
+                    op, ImGuizmo::WORLD, glm::value_ptr(transform))) {
+                    
+                    if (light.type == LIGHT_POINT) {
+                        light.position = glm::vec3(transform[3]);
+                    } else {
+                        // Extract direction from rotation
+                        // Transform (0, -1, 0) by the new rotation matrix
+                        // The rotation matrix is the upper-left 3x3 of transform
+                        glm::mat3 rotMat = glm::mat3(transform);
+                        light.direction = glm::normalize(rotMat * glm::vec3(0.0f, -1.0f, 0.0f));
+                    }
+                }
+            }
         }
 
         ImGui::Render();
