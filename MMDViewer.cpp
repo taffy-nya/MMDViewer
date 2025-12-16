@@ -15,7 +15,7 @@
 #include <string>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
-#include <glm/gtx/quaternion.hpp> // Added for rotation and toMat4
+#include <glm/gtx/quaternion.hpp>
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
@@ -75,6 +75,7 @@ double last_x, last_y;
 std::vector<Light> lights;
 glm::vec3 ambient_color(1.0f, 1.0f, 1.0f);
 float ambient_strength = 1.0f;
+glm::vec4 clear_color = glm::vec4(0.5f, 0.6f, 0.7f, 1.0f);
 
 // Shadow Mapping
 GLuint depthMapFBO;
@@ -92,6 +93,7 @@ bool show_skeleton = false;
 bool manual_bone_control = false;
 int selected_bone_index = -1;
 int selected_light_index = -1;
+bool show_control_window = true;
 ImGuizmo::OPERATION current_gizmo_operation = ImGuizmo::ROTATE;
 ImGuizmo::MODE current_gizmo_mode = ImGuizmo::LOCAL;
 
@@ -297,21 +299,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         if (camera) camera->handle_keys(key, action);
         
         switch (key) {
-            case GLFW_KEY_Q: {
-                glm::vec3 rot = mesh->get_rotation();
-                rot.z += 5.0f;
-                mesh->set_rotation(rot);
-                break;
-            }
-            case GLFW_KEY_E: {
-                glm::vec3 rot = mesh->get_rotation();
-                rot.z -= 5.0f;
-                mesh->set_rotation(rot);
-                break;
-            }
-            case GLFW_KEY_1: glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); break;
-            case GLFW_KEY_2: glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); break;
             case GLFW_KEY_R: reset(); break;
+            case GLFW_KEY_C: show_control_window = !show_control_window; break;
             case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GL_TRUE); break;
             default: break;
         }
@@ -326,10 +315,8 @@ void print_help() {
     printf("  Scroll:      Zoom in/out\n\n");
     printf("Keyboard:\n");
     printf("  W, A, S, D:  Move camera\n");
-    printf("  Q, E:        Rotate model on Z-axis\n");
-    printf("  1:           Solid mode\n");
-    printf("  2:           Wireframe mode\n");
     printf("  R:           Reset all transformations\n");
+    printf("  C:           Toggle control window\n");
     printf("  ESC:         Exit\n");
     printf("---------------------------------\n");
 }
@@ -442,7 +429,7 @@ int main(int argc, char** argv) {
         ImGui::NewFrame();
         ImGuizmo::BeginFrame();
 
-        {
+        if (show_control_window) {
             ImGui::Begin("MMD Viewer Controls");
             
             if (ImGui::BeginTabBar("ControlTabs")) {
@@ -460,6 +447,9 @@ int main(int argc, char** argv) {
                     if (ImGui::Button("Reset Camera")) {
                         if (camera) camera->reset();
                     }
+                    ImGui::Separator();
+                    ImGui::Text("Background");
+                    ImGui::ColorEdit3("Clear Color", (float*)&clear_color);
                     ImGui::EndTabItem();
                 }
 
@@ -539,6 +529,14 @@ int main(int argc, char** argv) {
                     }
 
                     ImGui::Separator();
+                    // Reset all bone local transforms
+                    if (mesh) {
+                        if (ImGui::Button("Reset All Bones")) {
+                            mesh->reset_pose();
+                            selected_bone_index = -1;
+                        }
+                    }
+                    
                     
                     if (mesh) {
                         auto& bones = mesh->get_bones();
@@ -648,6 +646,40 @@ int main(int argc, char** argv) {
                     if (selected_light_index != -1) {
                         if (ImGui::Button("Deselect Light")) {
                             selected_light_index = -1;
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Reset Selected Light")) {
+                            if (selected_light_index >= 0 && selected_light_index < (int)lights.size()) {
+                                Light &l = lights[selected_light_index];
+                                // Common defaults
+                                l.color = glm::vec3(1.0f);
+                                l.intensity = 1.0f;
+                                l.enabled = true;
+                                l.constant = 1.0f;
+                                l.linear = 0.09f;
+                                l.quadratic = 0.032f;
+                                if (l.type == LIGHT_POINT) {
+                                    l.position = glm::vec3(0.0f, 10.0f, 0.0f);
+                                } else {
+                                    l.direction = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
+                                }
+                            }
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Reset All Lights")) {
+                        for (auto &l : lights) {
+                            l.color = glm::vec3(1.0f);
+                            l.intensity = 1.0f;
+                            l.enabled = true;
+                            l.constant = 1.0f;
+                            l.linear = 0.09f;
+                            l.quadratic = 0.032f;
+                            if (l.type == LIGHT_POINT) {
+                                l.position = glm::vec3(0.0f, 10.0f, 0.0f);
+                            } else {
+                                l.direction = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
+                            }
                         }
                     }
 
@@ -830,6 +862,7 @@ int main(int argc, char** argv) {
 
         ImGui::Render();
 
+        glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         display();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
