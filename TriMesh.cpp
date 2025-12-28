@@ -16,6 +16,11 @@
 #include <iomanip>
 #include <cstring>
 
+template <typename T>
+void read_data(std::ifstream& file, T& val) {
+    file.read(reinterpret_cast<char*>(&val), sizeof(T));
+}
+
 unsigned int read_index(std::ifstream& file, int size) {
     unsigned int index = 0; char buffer[4]; file.read(buffer, size); if (!file) return -1;
     switch (size) {
@@ -28,7 +33,7 @@ unsigned int read_index(std::ifstream& file, int size) {
 }
 
 std::string read_pmx_string(std::ifstream& file, int text_encoding) {
-    int string_length; file.read(reinterpret_cast<char*>(&string_length), 4);
+    int string_length; read_data(file, string_length);
     if (!file || string_length <= 0) return "";
     std::vector<char> buffer(string_length); file.read(buffer.data(), string_length);
     if (!file) return "";
@@ -45,7 +50,7 @@ std::string read_pmx_string(std::ifstream& file, int text_encoding) {
 }
 
 void skip_pmx_string(std::ifstream& file) {
-    int string_length; file.read(reinterpret_cast<char*>(&string_length), 4);
+    int string_length; read_data(file, string_length);
     if (file && string_length > 0) file.seekg(string_length, std::ios_base::cur);
 }
 
@@ -65,8 +70,8 @@ void TriMesh::read_pmx(const std::string& filename) {
         return;
     }
 
-    float version; file.read(reinterpret_cast<char *>(&version), 4);
-    unsigned char global_info_size; file.read(reinterpret_cast<char*>(&global_info_size), 1);
+    float version; read_data(file, version);
+    unsigned char global_info_size; read_data(file, global_info_size);
     unsigned char g_info[8]; file.read(reinterpret_cast<char*>(g_info), global_info_size);
     unsigned char text_encoding = g_info[0], uv_size = g_info[1], vertex_index_size = g_info[2], texture_index_size = g_info[3],
                   material_index_size = g_info[4], bone_index_size = g_info[5], morph_index_size = g_info[6], rigid_body_index_size = g_info[7];
@@ -74,13 +79,13 @@ void TriMesh::read_pmx(const std::string& filename) {
     skip_pmx_string(file); skip_pmx_string(file); skip_pmx_string(file); skip_pmx_string(file);
 
     // 顶点
-    int num_vertices; file.read(reinterpret_cast<char*>(&num_vertices), 4);
+    int num_vertices; read_data(file, num_vertices);
     vertex_positions.reserve(num_vertices); vertex_normals.reserve(num_vertices); vertex_uvs.reserve(num_vertices); vertex_bone_data.reserve(num_vertices);
     for (int i = 0; i < num_vertices; ++i) {
         glm::vec3 pos, normal; glm::vec2 uv;
-        file.read(reinterpret_cast<char*>(&pos), 12);
-        file.read(reinterpret_cast<char*>(&normal), 12);
-        file.read(reinterpret_cast<char *>(&uv), 8);
+        read_data(file, pos);
+        read_data(file, normal);
+        read_data(file, uv);
         // 超级大坑：MMD 坐标系是左手系，OpenGL 是右手系，要反转 z 轴和 uv.y
         pos.z = -pos.z; normal.z = -normal.z;
         uv.y = 1.0f - uv.y;
@@ -89,7 +94,7 @@ void TriMesh::read_pmx(const std::string& filename) {
         vertex_uvs.push_back(uv);
         if (uv_size > 0) { file.seekg(16 * uv_size, std::ios::cur); }
         
-        unsigned char weight_type; file.read(reinterpret_cast<char*>(&weight_type), 1);
+        unsigned char weight_type; read_data(file, weight_type);
         VertexBoneData boneData;
         switch (weight_type) {
             case 0: { // BDEF1 (单骨骼
@@ -100,7 +105,7 @@ void TriMesh::read_pmx(const std::string& filename) {
             } case 1: { // BDEF2 (双骨骼)
                 int b1 = read_index(file, bone_index_size);
                 int b2 = read_index(file, bone_index_size);
-                float w1; file.read(reinterpret_cast<char*>(&w1), 4);
+                float w1; read_data(file, w1);
                 boneData.bone_indices[0] = b1;
                 boneData.bone_indices[1] = b2;
                 boneData.bone_weights[0] = w1;
@@ -112,10 +117,10 @@ void TriMesh::read_pmx(const std::string& filename) {
                 int b3 = read_index(file, bone_index_size);
                 int b4 = read_index(file, bone_index_size);
                 float w1, w2, w3, w4;
-                file.read(reinterpret_cast<char*>(&w1), 4);
-                file.read(reinterpret_cast<char*>(&w2), 4);
-                file.read(reinterpret_cast<char*>(&w3), 4);
-                file.read(reinterpret_cast<char*>(&w4), 4);
+                read_data(file, w1);
+                read_data(file, w2);
+                read_data(file, w3);
+                read_data(file, w4);
                 boneData.bone_indices[0] = b1;
                 boneData.bone_indices[1] = b2;
                 boneData.bone_indices[2] = b3;
@@ -128,7 +133,7 @@ void TriMesh::read_pmx(const std::string& filename) {
             } case 3: { // SDEF (球形混合，这里简化为 BDEF2)
                 int b1 = read_index(file, bone_index_size);
                 int b2 = read_index(file, bone_index_size);
-                float w1; file.read(reinterpret_cast<char*>(&w1), 4);
+                float w1; read_data(file, w1);
                 file.seekg(36, std::ios::cur); // 跳过 C, R0, R1
                 boneData.bone_indices[0] = b1;
                 boneData.bone_indices[1] = b2;
@@ -141,10 +146,10 @@ void TriMesh::read_pmx(const std::string& filename) {
                 int b3 = read_index(file, bone_index_size);
                 int b4 = read_index(file, bone_index_size);
                 float w1, w2, w3, w4;
-                file.read(reinterpret_cast<char*>(&w1), 4);
-                file.read(reinterpret_cast<char*>(&w2), 4);
-                file.read(reinterpret_cast<char*>(&w3), 4);
-                file.read(reinterpret_cast<char*>(&w4), 4);
+                read_data(file, w1);
+                read_data(file, w2);
+                read_data(file, w3);
+                read_data(file, w4);
                 boneData.bone_indices[0] = b1;
                 boneData.bone_indices[1] = b2;
                 boneData.bone_indices[2] = b3;
@@ -161,7 +166,7 @@ void TriMesh::read_pmx(const std::string& filename) {
     }
 
     // 面
-    int num_face_indices; file.read(reinterpret_cast<char*>(&num_face_indices), 4);
+    int num_face_indices; read_data(file, num_face_indices);
     faces.reserve(num_face_indices / 3);
     for (int i = 0; i < num_face_indices / 3; ++i) {
         unsigned int v1 = read_index(file, vertex_index_size);
@@ -171,45 +176,45 @@ void TriMesh::read_pmx(const std::string& filename) {
     }
 
     // 纹理
-    int num_textures; file.read(reinterpret_cast<char*>(&num_textures), 4);
+    int num_textures; read_data(file, num_textures);
     textures.reserve(num_textures);
     for (int i = 0; i < num_textures; ++i) {
         textures.push_back({read_pmx_string(file, text_encoding)});
     }
 
     // 材质
-    int num_materials; file.read(reinterpret_cast<char*>(&num_materials), 4);
+    int num_materials; read_data(file, num_materials);
     materials.reserve(num_materials);
     for (int i = 0; i < num_materials; ++i) {
         MaterialInfo mat;
         skip_pmx_string(file); skip_pmx_string(file);
-        file.read(reinterpret_cast<char*>(&mat.diffuse_color), 16);
-        file.read(reinterpret_cast<char*>(&mat.specular_color), 12);
-        file.read(reinterpret_cast<char*>(&mat.shininess), 4);
-        file.read(reinterpret_cast<char*>(&mat.ambient_color), 12);
-        unsigned char draw_flags; file.read(reinterpret_cast<char*>(&draw_flags), 1);
+        read_data(file, mat.diffuse_color);
+        read_data(file, mat.specular_color);
+        read_data(file, mat.shininess);
+        read_data(file, mat.ambient_color);
+        unsigned char draw_flags; read_data(file, draw_flags);
         mat.draw_flags = draw_flags;
-        file.read(reinterpret_cast<char*>(&mat.edge_color), 16);
-        file.read(reinterpret_cast<char*>(&mat.edge_size), 4);
+        read_data(file, mat.edge_color);
+        read_data(file, mat.edge_size);
         mat.texture_index = read_index(file, texture_index_size);
         mat.has_texture = (mat.texture_index != -1);
         file.seekg(texture_index_size + 1, std::ios::cur);
-        unsigned char toon_ref_type; file.read(reinterpret_cast<char*>(&toon_ref_type), 1);
+        unsigned char toon_ref_type; read_data(file, toon_ref_type);
         if (toon_ref_type == 0) { 
             mat.toon_texture_index = read_index(file, texture_index_size); 
             mat.use_internal_toon = false;
         } else { 
-            unsigned char internal_index; file.read(reinterpret_cast<char*>(&internal_index), 1); 
+            unsigned char internal_index; read_data(file, internal_index); 
             mat.toon_texture_index = internal_index; 
             mat.use_internal_toon = true;
         }
         skip_pmx_string(file);
-        file.read(reinterpret_cast<char*>(&mat.num_faces), 4);
+        read_data(file, mat.num_faces);
         materials.push_back(mat);
     }
 
     // 骨骼
-    int num_bones; file.read(reinterpret_cast<char*>(&num_bones), 4);
+    int num_bones; read_data(file, num_bones);
     bones.resize(num_bones);
     
     for (int i = 0; i < num_bones; ++i) {
@@ -217,11 +222,11 @@ void TriMesh::read_pmx(const std::string& filename) {
         bone.name = read_pmx_string(file, text_encoding);
         bone_mapping[bone.name] = i;
         skip_pmx_string(file); // 跳过英文名
-        file.read(reinterpret_cast<char*>(&bone.position), 12);
+        read_data(file, bone.position);
         bone.position.z = -bone.position.z; // 坐标系转换
         bone.parent_index = read_index(file, bone_index_size);
-        int transform_level; file.read(reinterpret_cast<char*>(&transform_level), 4);
-        unsigned short flags; file.read(reinterpret_cast<char*>(&flags), 2);
+        int transform_level; read_data(file, transform_level);
+        unsigned short flags; read_data(file, flags);
         bone.flags = flags;
         
         if (flags & 0x0001) { // 连接方式: 1 = 骨骼索引, 0 = 偏移量
@@ -232,7 +237,7 @@ void TriMesh::read_pmx(const std::string& filename) {
         
         if (flags & 0x0100 || flags & 0x0200) { // 旋转/平移 继承
              bone.inherit_parent_index = read_index(file, bone_index_size);
-             file.read(reinterpret_cast<char*>(&bone.inherit_influence), 4);
+             read_data(file, bone.inherit_influence);
         }
         
         if (flags & 0x0400) { // 固定轴
@@ -244,22 +249,22 @@ void TriMesh::read_pmx(const std::string& filename) {
         }
         
         if (flags & 0x2000) { // 外部父骨骼变形
-            int key; file.read(reinterpret_cast<char*>(&key), 4);
+            int key; read_data(file, key);
         }
 
         if (flags & 0x0020) { // IK (反向动力学)
             bone.ik_target_index = read_index(file, bone_index_size);
-            file.read(reinterpret_cast<char*>(&bone.ik_loop_count), 4);
-            file.read(reinterpret_cast<char*>(&bone.ik_limit_angle), 4);
-            int link_count; file.read(reinterpret_cast<char*>(&link_count), 4);
+            read_data(file, bone.ik_loop_count);
+            read_data(file, bone.ik_limit_angle);
+            int link_count; read_data(file, link_count);
             bone.ik_links.resize(link_count);
-            for(int j=0; j<link_count; ++j) {
+            for (int j = 0; j < link_count; ++j) {
                 bone.ik_links[j].bone_index = read_index(file, bone_index_size);
-                unsigned char has_limits; file.read(reinterpret_cast<char*>(&has_limits), 1);
+                unsigned char has_limits; read_data(file, has_limits);
                 bone.ik_links[j].has_limits = (has_limits != 0);
-                if(has_limits) {
-                    file.read(reinterpret_cast<char*>(&bone.ik_links[j].min_limit), 12);
-                    file.read(reinterpret_cast<char*>(&bone.ik_links[j].max_limit), 12);
+                if (has_limits) {
+                    read_data(file, bone.ik_links[j].min_limit);
+                    read_data(file, bone.ik_links[j].max_limit);
                 }
             }
         }

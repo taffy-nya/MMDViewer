@@ -35,10 +35,10 @@ Stage::Stage(float size, int divisions) {
         // 位置                  // 法线 (向上)
         -size, 0.0f, -size,     0.0f, 1.0f, 0.0f,
         -size, 0.0f,  size,     0.0f, 1.0f, 0.0f,
-         size, 0.0f,  size,     0.0f, 1.0f, 0.0f,
+            size, 0.0f,  size,     0.0f, 1.0f, 0.0f,
         -size, 0.0f, -size,     0.0f, 1.0f, 0.0f,
-         size, 0.0f,  size,     0.0f, 1.0f, 0.0f,
-         size, 0.0f, -size,     0.0f, 1.0f, 0.0f
+            size, 0.0f,  size,     0.0f, 1.0f, 0.0f,
+            size, 0.0f, -size,     0.0f, 1.0f, 0.0f
     };
 
     glGenVertexArrays(1, &vao_plane);
@@ -181,7 +181,7 @@ void Stage::draw(Camera* camera, const std::vector<Light>& lights, const glm::ve
     glUniform1f(ambient_strength_loc, ambientStrength);
     glUniform1i(num_lights_loc, (int)lights.size());
 
-    for(size_t i=0; i<lights.size() && i<16; ++i) {
+    for (int i = 0; i < lights.size() && i < 16; ++i) {
         const auto& light = lights[i];
         const auto& locs = light_locations[i];
         glUniform3fv(locs.position, 1, glm::value_ptr(light.position));

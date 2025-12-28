@@ -7,6 +7,11 @@
 
 #include <windows.h>
 
+template <typename T>
+void read_data(std::ifstream& file, T& val) {
+    file.read(reinterpret_cast<char*>(&val), sizeof(T));
+}
+
 // 将 Shift-JIS 编码转换为 UTF-8
 // VMD 文件中的字符串 (骨骼名称之类的) 一般是 Shift-JIS 编码
 std::string shift_jis_to_utf8(const std::string& sjis) {
@@ -43,24 +48,24 @@ bool VMDAnimation::load(const std::string& filename) {
 
     // 骨骼关键帧数量
     int numBoneKeyframes;
-    file.read(reinterpret_cast<char*>(&numBoneKeyframes), 4);
+    read_data(file, numBoneKeyframes);
 
     for (int i = 0; i < numBoneKeyframes; ++i) {
         char boneName[15];
         file.read(boneName, 15);
         
         int frame;
-        file.read(reinterpret_cast<char*>(&frame), 4);
+        read_data(file, frame);
         
         glm::vec3 pos;
-        file.read(reinterpret_cast<char*>(&pos), 12);
+        read_data(file, pos);
         pos.z = -pos.z; // 跟 TriMesh 里一样的坑
         
         float qx, qy, qz, qw;
-        file.read(reinterpret_cast<char*>(&qx), 4);
-        file.read(reinterpret_cast<char*>(&qy), 4);
-        file.read(reinterpret_cast<char*>(&qz), 4);
-        file.read(reinterpret_cast<char*>(&qw), 4);
+        read_data(file, qx);
+        read_data(file, qy);
+        read_data(file, qz);
+        read_data(file, qw);
         
         BoneKeyframe kf;
         kf.frame = frame;

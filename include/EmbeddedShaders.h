@@ -2,7 +2,7 @@
 #include <string>
 #include <unordered_map>
 
-inline std::string get_embedded_shader(const std::string& filename) {
+std::string get_embedded_shader(const std::string& filename) {
     static std::unordered_map<std::string, std::string> shaders = {
         {"shaders/fshader.glsl", R"(#version 330 core
 out vec4 fColor;

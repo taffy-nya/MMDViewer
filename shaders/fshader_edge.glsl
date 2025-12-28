@@ -19,8 +19,7 @@ struct Light {
     bool enabled;
 };
 
-#define MAX_LIGHTS 16
-uniform Light lights[MAX_LIGHTS];
+uniform Light lights[16];
 uniform int numLights;
 uniform vec3 ambientColor;
 uniform float ambientStrength;

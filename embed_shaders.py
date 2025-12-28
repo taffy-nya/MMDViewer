@@ -17,7 +17,7 @@ def main():
         out.write("#pragma once\n")
         out.write("#include <string>\n")
         out.write("#include <unordered_map>\n\n")
-        out.write("inline std::string get_embedded_shader(const std::string& filename) {\n")
+        out.write("std::string get_embedded_shader(const std::string& filename) {\n")
         out.write("    static std::unordered_map<std::string, std::string> shaders = {\n")
 
         for root, dirs, files in os.walk(shader_dir):
