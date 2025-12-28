@@ -3,7 +3,7 @@
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/quaternion.hpp> // Added for rotation
+#include <glm/gtx/quaternion.hpp>
 
 MeshPainter::MeshPainter() {
     init_gizmo_resources();
@@ -38,10 +38,11 @@ void MeshPainter::add_mesh(TriMesh* mesh, const ShaderConfig& config) {
     MeshEntry entry;
     entry.mesh = mesh;
     
-    // Bind Main Object
+    // 绑定主渲染对象 (VAO/VBO/Shader)
     bind_object_and_data(mesh, entry.main_object, config.vshader, config.fshader, false);
     
-    // Cache Uniform Locations for Main Object
+    // 缓存主渲染 Shader 的 Uniform 位置
+    // 这样做是为了避免在绘制循环中频繁调用 glGetUniformLocation，提高性能
     entry.main_object.model_location = glGetUniformLocation(entry.main_object.program, "model");
     entry.main_object.view_location = glGetUniformLocation(entry.main_object.program, "view");
     entry.main_object.projection_location = glGetUniformLocation(entry.main_object.program, "projection");
@@ -54,17 +55,18 @@ void MeshPainter::add_mesh(TriMesh* mesh, const ShaderConfig& config) {
     entry.main_object.toon_sampler_location = glGetUniformLocation(entry.main_object.program, "toonSampler");
     entry.main_object.bone_matrices_location = glGetUniformLocation(entry.main_object.program, "boneMatrices");
 
-    // Light Uniforms
+    // 光照 Uniforms
     entry.main_object.ambient_color_location = glGetUniformLocation(entry.main_object.program, "ambientColor");
     entry.main_object.ambient_strength_location = glGetUniformLocation(entry.main_object.program, "ambientStrength");
     entry.main_object.num_lights_location = glGetUniformLocation(entry.main_object.program, "numLights");
     entry.main_object.brightness_location = glGetUniformLocation(entry.main_object.program, "brightness");
     
-    // Shadow Uniforms
+    // 阴影 Uniforms
     entry.main_object.shadowMap_location = glGetUniformLocation(entry.main_object.program, "shadowMap");
     entry.main_object.lightSpaceMatrix_location = glGetUniformLocation(entry.main_object.program, "lightSpaceMatrix");
 
-    // Shadow Pass Program
+    // 初始化阴影生成的 shader
+    // 这里的 shader 只负责输出深度值，不需要 fshader 计算颜色
     entry.main_object.shadow_program = InitShader("shaders/vshader_shadow.glsl", "shaders/fshader_shadow.glsl");
     entry.main_object.shadow_model_location = glGetUniformLocation(entry.main_object.shadow_program, "model");
     entry.main_object.shadow_lightSpaceMatrix_location = glGetUniformLocation(entry.main_object.shadow_program, "lightSpaceMatrix");
@@ -83,6 +85,7 @@ void MeshPainter::add_mesh(TriMesh* mesh, const ShaderConfig& config) {
         entry.main_object.light_locations[i].enabled = glGetUniformLocation(entry.main_object.program, (base + ".enabled").c_str());
     }
     
+    // 初始化描边的 shader
     entry.edge_object.program = InitShader(config.vshader_edge.c_str(), config.fshader_edge.c_str());
     entry.edge_object.model_location = glGetUniformLocation(entry.edge_object.program, "model");
     entry.edge_object.view_location = glGetUniformLocation(entry.edge_object.program, "view");
@@ -91,7 +94,7 @@ void MeshPainter::add_mesh(TriMesh* mesh, const ShaderConfig& config) {
     entry.edge_object.edge_color_location = glGetUniformLocation(entry.edge_object.program, "edge_color");
     entry.edge_object.bone_matrices_location = glGetUniformLocation(entry.edge_object.program, "boneMatrices");
     
-    // Edge Light Uniforms
+    // 描边的光照 Uniforms
     entry.edge_object.ambient_color_location = glGetUniformLocation(entry.edge_object.program, "ambientColor");
     entry.edge_object.ambient_strength_location = glGetUniformLocation(entry.edge_object.program, "ambientStrength");
     entry.edge_object.num_lights_location = glGetUniformLocation(entry.edge_object.program, "numLights");
@@ -109,7 +112,7 @@ void MeshPainter::add_mesh(TriMesh* mesh, const ShaderConfig& config) {
         entry.edge_object.light_locations[i].enabled = glGetUniformLocation(entry.edge_object.program, (base + ".enabled").c_str());
     }
 
-    // We share VAO for edge pass
+    // 描边复用主渲染的 VAO，因为用的同一个顶点数据
     entry.edge_object.vao = entry.main_object.vao; 
 
     meshes.push_back(entry);
@@ -124,6 +127,7 @@ void MeshPainter::bind_object_and_data(TriMesh* mesh, OpenGLObject& object, cons
     const auto &u = mesh->get_vertex_uvs();
     const auto &b = mesh->get_vertex_bone_data();
     
+    // 之前 debug 用的
     if (p.empty() || p.size() != n.size() || p.size() != u.size() || p.size() != b.size()) { 
         std::cerr << "Vertex attribute mismatch!" << std::endl; 
         return; 
@@ -134,6 +138,7 @@ void MeshPainter::bind_object_and_data(TriMesh* mesh, OpenGLObject& object, cons
     size_t u_size = u.size()*sizeof(glm::vec2);
     size_t b_size = b.size()*sizeof(VertexBoneData);
     
+    // 创建并绑定 VBO
     glGenBuffers(1, &object.vbo);
     glBindBuffer(GL_ARRAY_BUFFER, object.vbo);
     glBufferData(GL_ARRAY_BUFFER, p_size+n_size+u_size+b_size, NULL, GL_STATIC_DRAW);
@@ -142,6 +147,7 @@ void MeshPainter::bind_object_and_data(TriMesh* mesh, OpenGLObject& object, cons
     glBufferSubData(GL_ARRAY_BUFFER, p_size+n_size, u_size, u.data());
     glBufferSubData(GL_ARRAY_BUFFER, p_size+n_size+u_size, b_size, b.data());
     
+    // 创建并绑定 EBO，存储顶点索引，用于 glDrawElements
     glGenBuffers(1, &object.ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object.ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->get_faces().size()*sizeof(vec3u), mesh->get_faces().data(), GL_STATIC_DRAW);
@@ -152,15 +158,15 @@ void MeshPainter::bind_object_and_data(TriMesh* mesh, OpenGLObject& object, cons
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(p_size)); glEnableVertexAttribArray(1);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(p_size+n_size)); glEnableVertexAttribArray(2);
 
-    // Bone Indices (ivec4)
+    // 骨骼索引
     glVertexAttribIPointer(3, 4, GL_INT, sizeof(VertexBoneData), BUFFER_OFFSET(p_size+n_size+u_size)); 
     glEnableVertexAttribArray(3);
     
-    // Bone Weights (vec4)
+    // 骨骼权重
     glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(VertexBoneData), BUFFER_OFFSET(p_size+n_size+u_size + sizeof(glm::ivec4))); 
     glEnableVertexAttribArray(4);
 
-    // Initialize TBO for bones
+    // 初始化 TBO 用于存储骨骼矩阵
     glGenBuffers(1, &object.bone_tbo);
     glBindBuffer(GL_TEXTURE_BUFFER, object.bone_tbo);
     glGenTextures(1, &object.bone_texture);
@@ -174,7 +180,9 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
     for (const auto& entry : meshes) {
         glm::mat4 model = entry.mesh->get_model_matrix();
         
-        // Prepare bone matrices
+        // 计算骨骼变换矩阵 = GlobalTransform * OffsetMatrix
+        // 前者从骨骼空间变换回模型空间（经过动画姿态调整后）
+        // 后者从模型空间变换到骨骼空间
         std::vector<glm::mat4> boneTransforms;
         auto& bones = entry.mesh->get_bones();
         if (!bones.empty()) {
@@ -186,29 +194,31 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
 
         glBindVertexArray(entry.main_object.vao);
 
-        // Pass 1: Outline
+        // 描边绘制
+        // MMD 的描边通过背面剔除反转法线或稍微放大模型来实现
+        // 这里使用背面剔除绘制背面
         glEnable(GL_CULL_FACE);
-        glCullFace(GL_FRONT);
+        glCullFace(GL_FRONT); // 剔除正面，只绘制背面
         glUseProgram(entry.edge_object.program);
         
         if (!boneTransforms.empty()) {
-             // Update TBO
-             glBindBuffer(GL_TEXTURE_BUFFER, entry.main_object.bone_tbo);
-             glBufferData(GL_TEXTURE_BUFFER, boneTransforms.size() * sizeof(glm::mat4), boneTransforms.data(), GL_DYNAMIC_DRAW);
-             
-             // Bind TBO to Texture Unit 2
-             glActiveTexture(GL_TEXTURE2);
-             glBindTexture(GL_TEXTURE_BUFFER, entry.main_object.bone_texture);
-             glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, entry.main_object.bone_tbo);
-             
-             glUniform1i(entry.edge_object.bone_matrices_location, 2);
+            // 更新 TBO
+            glBindBuffer(GL_TEXTURE_BUFFER, entry.main_object.bone_tbo);
+            glBufferData(GL_TEXTURE_BUFFER, boneTransforms.size() * sizeof(glm::mat4), boneTransforms.data(), GL_DYNAMIC_DRAW);
+            
+            // 绑定 TBO
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_BUFFER, entry.main_object.bone_texture);
+            glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, entry.main_object.bone_tbo);
+            
+            glUniform1i(entry.edge_object.bone_matrices_location, 2);
         }
         
         glUniformMatrix4fv(entry.edge_object.model_location, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(entry.edge_object.view_location, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(entry.edge_object.projection_location, 1, GL_FALSE, glm::value_ptr(projection));
         
-        // Pass lights to edge shader
+        // 传递光照信息给描边的 shader
         glUniform3fv(entry.edge_object.ambient_color_location, 1, glm::value_ptr(ambientColor));
         glUniform1f(entry.edge_object.ambient_strength_location, ambientStrength);
         glUniform1i(entry.edge_object.num_lights_location, (int)lights.size());
@@ -229,16 +239,18 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
 
         unsigned int face_offset = 0;
         for (const auto& mat : entry.mesh->get_materials()) {
-            glUniform1f(entry.edge_object.edge_size_location, mat.edge_size * 0.03f);
+            // 传递材质特定的描边参数
+            glUniform1f(entry.edge_object.edge_size_location, mat.edge_size * 0.03f); // 缩放系数，根据需要调整
             glUniform4fv(entry.edge_object.edge_color_location, 1, glm::value_ptr(mat.edge_color));
             glDrawElements(GL_TRIANGLES, mat.num_faces, GL_UNSIGNED_INT, (void*)(face_offset*sizeof(unsigned int)));
             face_offset += mat.num_faces;
         }
 
-        // Pass 2: Main Model
-        glCullFace(GL_BACK);
+        // 主模型渲染
+        glCullFace(GL_BACK); // 恢复前面的剔除背面
         glUseProgram(entry.main_object.program);
         
+        // 阴影
         glUniformMatrix4fv(entry.main_object.lightSpaceMatrix_location, 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
         
         glActiveTexture(GL_TEXTURE10);
@@ -246,14 +258,10 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
         glUniform1i(entry.main_object.shadowMap_location, 10);
         
         if (!boneTransforms.empty()) {
-             // Bind TBO to Texture Unit 2 (already updated)
-             glActiveTexture(GL_TEXTURE2);
-             glBindTexture(GL_TEXTURE_BUFFER, entry.main_object.bone_texture);
-             // glTexBuffer is associated with the texture object, so binding the texture is enough if we didn't change the buffer association
-             // But to be safe/clear:
-             // glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, entry.mainObject.boneTbo); 
-             
-             glUniform1i(entry.main_object.bone_matrices_location, 2);
+            // 绑定 TBO
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_BUFFER, entry.main_object.bone_texture);
+            glUniform1i(entry.main_object.bone_matrices_location, 2);
         }
         
         glUniformMatrix4fv(entry.main_object.model_location, 1, GL_FALSE, glm::value_ptr(model));
@@ -262,10 +270,10 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
         
         glUniform3fv(entry.main_object.view_pos_location, 1, glm::value_ptr(viewPos));
 
-        // Light Uniforms
+        // 光照
         glUniform3fv(entry.main_object.ambient_color_location, 1, glm::value_ptr(ambientColor));
         glUniform1f(entry.main_object.ambient_strength_location, ambientStrength);
-        // glUniform1f(entry.main_object.brightness_location, brightness); // Removed brightness uniform usage if not defined in struct
+        // glUniform1f(entry.main_object.brightness_location, brightness);
         glUniform1i(entry.main_object.num_lights_location, (int)lights.size());
 
         for (int i = 0; i < lights.size() && i < 16; ++i) {
@@ -299,7 +307,7 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
                 glUniform1i(entry.main_object.has_texture_location, 0);
             }
 
-            // Bind Toon Texture
+            // 绑定 Toon 纹理
             glActiveTexture(GL_TEXTURE1);
             if (mat.use_internal_toon) {
                 // MMD 会有自带的 toon，这里为了方便直接用一个默认纹理代替
@@ -312,11 +320,11 @@ void MeshPainter::draw_meshes(Camera* camera, const std::vector<Light>& lights, 
                 }
             }
             
-            if (mat.draw_flags & 0x01) { // Double Sided
-                 glDisable(GL_CULL_FACE);
+            if (mat.draw_flags & 0x01) { // 双面渲染
+                glDisable(GL_CULL_FACE);
             } else {
-                 glEnable(GL_CULL_FACE);
-                 glCullFace(GL_BACK);
+                glEnable(GL_CULL_FACE);
+                glCullFace(GL_BACK);
             }
 
             glDrawElements(GL_TRIANGLES, mat.num_faces, GL_UNSIGNED_INT, (void*)(face_offset*sizeof(unsigned int)));
@@ -336,7 +344,7 @@ void MeshPainter::draw_shadow(const glm::mat4& lightSpaceMatrix) {
         glUniformMatrix4fv(entry.main_object.shadow_model_location, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(entry.main_object.shadow_lightSpaceMatrix_location, 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
         
-        // Bind Bone Matrices
+        // 绑定骨骼矩阵 (TBO)
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_BUFFER, entry.main_object.bone_texture);
         glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, entry.main_object.bone_tbo);
@@ -354,26 +362,27 @@ void MeshPainter::draw_shadow(const glm::mat4& lightSpaceMatrix) {
 
         glBindVertexArray(entry.main_object.vao);
         
-        // Draw Submeshes
+        // 绘制子网格
         unsigned int face_offset = 0;
         for (const auto& mat : entry.mesh->get_materials()) {
-             if (mat.draw_flags & 0x01) { // Double Sided
-                 glDisable(GL_CULL_FACE);
-             } else {
-                 glEnable(GL_CULL_FACE);
-                 glCullFace(GL_BACK);
-             }
-             glDrawElements(GL_TRIANGLES, mat.num_faces, GL_UNSIGNED_INT, (void*)(face_offset * sizeof(unsigned int)));
-             face_offset += mat.num_faces;
+            if (mat.draw_flags & 0x01) { // 双面渲染
+                glDisable(GL_CULL_FACE);
+            } else {
+                glEnable(GL_CULL_FACE);
+                glCullFace(GL_BACK);
+            }
+            glDrawElements(GL_TRIANGLES, mat.num_faces, GL_UNSIGNED_INT, (void*)(face_offset * sizeof(unsigned int)));
+            face_offset += mat.num_faces;
         }
         glBindVertexArray(0);
-        glEnable(GL_CULL_FACE); // Restore default
+        glEnable(GL_CULL_FACE); // 恢复
         glCullFace(GL_BACK);
     }
 }
 
+// 用一个立方体和线段指示光源位置和方向
 void MeshPainter::init_gizmo_resources() {
-    // Simple Cube Vertices
+    // 立方体顶点
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f, -0.5f,
         -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f,  0.5f,  0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f, -0.5f,  0.5f,
@@ -393,7 +402,7 @@ void MeshPainter::init_gizmo_resources() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Line Gizmo (0,0,0) to (0,0,1)
+    // 线段顶点
     float line_vertices[] = {
         0.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f
@@ -412,7 +421,7 @@ void MeshPainter::init_gizmo_resources() {
     gizmo_proj_loc = glGetUniformLocation(gizmo_program, "projection");
     gizmo_color_loc = glGetUniformLocation(gizmo_program, "color");
 
-    // Create default white toon texture
+    // 创建默认的白色 Toon 纹理
     glGenTextures(1, &default_toon_texture);
     glBindTexture(GL_TEXTURE_2D, default_toon_texture);
     unsigned char whitePixel[3] = { 255, 255, 255 };
@@ -441,6 +450,8 @@ void MeshPainter::draw_light_gizmos(Camera* camera, const std::vector<Light>& li
 
         glm::mat4 model = glm::mat4(1.0f);
         if (light.type == LIGHT_POINT) {
+            // 点光源可视化
+            // 画个立方体表示光源位置
             model = glm::translate(model, light.position);
             model = glm::scale(model, glm::vec3(0.5f));
             
@@ -449,13 +460,12 @@ void MeshPainter::draw_light_gizmos(Camera* camera, const std::vector<Light>& li
             glBindVertexArray(gizmo_vao);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         } else {
-            // Directional Light Visualization
-            // Draw a line from a hypothetical source towards the scene center
-            // Source is placed opposite to the direction
+            // 方向光可视化
+            // 从一个假设的光源位置向场景中心画一条线，然后把光源位置放在方向的相反方向
             glm::vec3 dir = glm::normalize(light.direction);
             glm::vec3 source = -dir * 15.0f; 
             
-            // 1. Draw a small cube at the source
+            // 画个立方体表示光源位置
             model = glm::translate(glm::mat4(1.0f), source);
             model = glm::scale(model, glm::vec3(0.5f));
             glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
@@ -463,15 +473,16 @@ void MeshPainter::draw_light_gizmos(Camera* camera, const std::vector<Light>& li
             glBindVertexArray(gizmo_vao);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             
-            // 2. Draw a line representing the direction
-            // We want to transform the line (0,0,0)->(0,0,1) to start at source and point in 'dir'
-            // Rotation from (0,0,1) to 'dir'
+            // 画条线段表示光照方向
+            
+            // (0,0,0)->(0,0,1) 变换到 source -> dir
+            // 计算 (0,0,1) -> dir 的旋转
             glm::vec3 from = glm::vec3(0.0f, 0.0f, 1.0f);
             glm::quat rotation = glm::rotation(from, dir);
             
             model = glm::translate(glm::mat4(1.0f), source);
             model = model * glm::toMat4(rotation);
-            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 5.0f)); // 5 units long ray
+            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 5.0f));
             
             glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
             glBindVertexArray(gizmo_line_vao);
@@ -511,7 +522,7 @@ void MeshPainter::draw_skeleton(Camera* camera, int selected_bone_index) {
             glm::vec3 start = glm::vec3(parent.global_transform[3]);
             glm::vec3 end = glm::vec3(bone.global_transform[3]);
 
-            // Apply model matrix to convert from Model Space to World Space
+            // 应用模型矩阵，从模型空间转换到世界空间
             start = glm::vec3(modelMatrix * glm::vec4(start, 1.0f));
             end = glm::vec3(modelMatrix * glm::vec4(end, 1.0f));
 
@@ -521,7 +532,7 @@ void MeshPainter::draw_skeleton(Camera* camera, int selected_bone_index) {
 
             glm::vec3 direction = glm::normalize(dir);
             
-            // Rotation from (0,0,1) to direction
+            // 计算 (0,0,1) -> direction 的旋转
             glm::vec3 from = glm::vec3(0.0f, 0.0f, 1.0f);
             glm::quat rotation = glm::rotation(from, direction);
             
@@ -531,40 +542,40 @@ void MeshPainter::draw_skeleton(Camera* camera, int selected_bone_index) {
 
             glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
             
-            // Color: Highlight selected bone connection (parent -> selected)
+            // 高亮选中的骨骼连接 (父骨骼 -> 选中骨骼)
             if (i == selected_bone_index) {
-                glUniform3f(gizmo_color_loc, 1.0f, 1.0f, 0.0f); // Yellow for selected
+                glUniform3f(gizmo_color_loc, 1.0f, 1.0f, 0.0f); // 选中的关节为黄色
             } else {
-                glUniform3f(gizmo_color_loc, 0.0f, 1.0f, 0.0f); // Green for others
+                glUniform3f(gizmo_color_loc, 0.0f, 1.0f, 0.0f); // 绿色
             }
             
             glDrawArrays(GL_LINES, 0, 2);
         }
         
-        // Draw points at joints
-        glBindVertexArray(gizmo_vao); // Cube VAO
+        // 在关节处绘制点 (小立方体)
+        glBindVertexArray(gizmo_vao);
         for (int i = 0; i < bones.size(); ++i) {
             PMXBone& bone = bones[i];
             glm::vec3 pos = glm::vec3(bone.global_transform[3]);
             pos = glm::vec3(modelMatrix * glm::vec4(pos, 1.0f));
             
             glm::mat4 model = glm::translate(glm::mat4(1.0f), pos);
-            model = glm::scale(model, glm::vec3(0.1f)); // Small cube
+            model = glm::scale(model, glm::vec3(0.1f)); // 小立方体
             
             glUniformMatrix4fv(gizmo_model_loc, 1, GL_FALSE, glm::value_ptr(model));
             
             if (i == selected_bone_index) {
-                glUniform3f(gizmo_color_loc, 1.0f, 0.0f, 0.0f); // Red for selected joint
+                glUniform3f(gizmo_color_loc, 1.0f, 0.0f, 0.0f); // 选中的关节为红色
             } else {
-                glUniform3f(gizmo_color_loc, 0.0f, 0.0f, 1.0f); // Blue for others
+                glUniform3f(gizmo_color_loc, 0.0f, 0.0f, 1.0f); // 蓝色
             }
             
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
-        glBindVertexArray(gizmo_line_vao); // Switch back for next lines
+        glBindVertexArray(gizmo_line_vao); // 切换回线段 VAO 用于下一次循环
     }
 
-    // Restore depth test state
+    // 恢复深度测试状态
     if (depthTestEnabled) {
         glEnable(GL_DEPTH_TEST);
     }

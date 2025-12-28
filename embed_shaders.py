@@ -4,6 +4,7 @@ import sys
 def escape_string(s):
     return 'R"(' + s + ')"'
 
+# 把 shaders 集成成一个头文件
 def main():
     shader_dir = "shaders"
     output_file = "include/EmbeddedShaders.h"
@@ -25,8 +26,6 @@ def main():
                     path = os.path.join(root, file).replace("\\", "/")
                     with open(path, "r", encoding="utf-8") as f:
                         content = f.read()
-                        # Normalize path to match what the C++ code expects (e.g. "shaders/vshader.glsl")
-                        # The C++ code uses relative paths like "shaders/..."
                         out.write(f'        {{"{path}", {escape_string(content)}}},\n')
 
         out.write("    };\n")

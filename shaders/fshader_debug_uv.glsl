@@ -4,8 +4,7 @@
 out vec4 fColor;
 in vec2 UV; // 从顶点着色器传入的 UV 坐标
 
-void main()
-{
+void main() {
     // 将 UV 坐标直接作为颜色输出
     // U -> R (红色通道)
     // V -> G (绿色通道)

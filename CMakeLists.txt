@@ -48,13 +48,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(imgui)
 
 set(IMGUI_SOURCES
-    ${imgui_SOURCE_DIR}/imgui.cpp
-    ${imgui_SOURCE_DIR}/imgui_demo.cpp
-    ${imgui_SOURCE_DIR}/imgui_draw.cpp
-    ${imgui_SOURCE_DIR}/imgui_tables.cpp
-    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+  ${imgui_SOURCE_DIR}/imgui.cpp
+  ${imgui_SOURCE_DIR}/imgui_demo.cpp
+  ${imgui_SOURCE_DIR}/imgui_draw.cpp
+  ${imgui_SOURCE_DIR}/imgui_tables.cpp
+  ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
 # imguizmo
@@ -65,21 +65,20 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imguizmo)
 
-# Embedded Shaders Generation
+# 用于集成 shaders
 find_package(Python3 REQUIRED)
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/include/EmbeddedShaders.h
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/embed_shaders.py
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/embed_shaders.py
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Generating embedded shaders header"
+  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/include/EmbeddedShaders.h
+  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/embed_shaders.py
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/embed_shaders.py
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMENT "Generating embedded shaders header"
 )
 
 # add_compile_options("-DNDEBUG")
 
 # target
 aux_source_directory("./" PROJECT_SOURCES)
-# Ensure the header is generated before building the executable
 add_executable(MMDViewer ${PROJECT_SOURCES} ${IMGUI_SOURCES} ${imguizmo_SOURCE_DIR}/ImGuizmo.cpp ${CMAKE_CURRENT_SOURCE_DIR}/include/EmbeddedShaders.h)
 target_include_directories(MMDViewer PRIVATE include ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${stb_SOURCE_DIR} ${imguizmo_SOURCE_DIR})
 

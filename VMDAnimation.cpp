@@ -7,9 +7,10 @@
 
 #include <windows.h>
 
-// Helper to convert Shift-JIS to UTF-8
+// 将 Shift-JIS 编码转换为 UTF-8
+// VMD 文件中的字符串 (骨骼名称之类的) 一般是 Shift-JIS 编码
 std::string shift_jis_to_utf8(const std::string& sjis) {
-    int w_len = MultiByteToWideChar(932, 0, sjis.c_str(), -1, NULL, 0); // 932 is Shift-JIS
+    int w_len = MultiByteToWideChar(932, 0, sjis.c_str(), -1, NULL, 0);
     if (w_len == 0) return sjis;
     std::vector<wchar_t> w_str(w_len);
     MultiByteToWideChar(932, 0, sjis.c_str(), -1, w_str.data(), w_len);
@@ -28,9 +29,11 @@ bool VMDAnimation::load(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) return false;
 
+    // 读取文件头
     char header[30];
     file.read(header, 30);
     if (strncmp(header, "Vocaloid Motion Data 0002", 25) != 0) {
+        // 只支持 v2
         std::cerr << "Invalid VMD header" << std::endl;
         return false;
     }
@@ -38,6 +41,7 @@ bool VMDAnimation::load(const std::string& filename) {
     char modelName[20];
     file.read(modelName, 20);
 
+    // 骨骼关键帧数量
     int numBoneKeyframes;
     file.read(reinterpret_cast<char*>(&numBoneKeyframes), 4);
 
@@ -50,7 +54,7 @@ bool VMDAnimation::load(const std::string& filename) {
         
         glm::vec3 pos;
         file.read(reinterpret_cast<char*>(&pos), 12);
-        pos.z = -pos.z; // Coordinate fix
+        pos.z = -pos.z; // 跟 TriMesh 里一样的坑
         
         float qx, qy, qz, qw;
         file.read(reinterpret_cast<char*>(&qx), 4);
@@ -63,15 +67,15 @@ bool VMDAnimation::load(const std::string& filename) {
         kf.position = pos;
         kf.rotation = glm::quat(qw, -qx, -qy, qz); 
         
-        char interpolation[64];
+        char interpolation[64]; // 贝塞尔曲线插值参数 (跳过)
         file.read(interpolation, 64);
         
-        // Clean bone name (null terminated)
+        // 清理骨骼名称 (确保以 null 结尾)
         std::string nameStr(boneName);
         size_t nullPos = nameStr.find('\0');
         if (nullPos != std::string::npos) nameStr = nameStr.substr(0, nullPos);
         
-        // Convert to UTF-8
+        // 转换为 UTF-8
         nameStr = shift_jis_to_utf8(nameStr);
 
         tracks[nameStr].keyframes.push_back(kf);
@@ -79,7 +83,7 @@ bool VMDAnimation::load(const std::string& filename) {
         if ((float)frame > duration) duration = (float)frame;
     }
     
-    // Sort keyframes by frame number
+    // 按帧号排序关键帧
     for (auto& track : tracks) {
         std::sort(track.second.keyframes.begin(), track.second.keyframes.end(), 
             [](const BoneKeyframe& a, const BoneKeyframe& b) {
@@ -90,16 +94,18 @@ bool VMDAnimation::load(const std::string& filename) {
     return true;
 }
 
-void VMDAnimation::update(float frame, TriMesh* mesh) {
+// 更新模型姿态
+// frame 为当前播放的帧数, 这里 float 可以是小数, 用于插值
+void VMDAnimation::update(float frame, TriMesh *mesh) {
     auto& bones = mesh->get_bones();
     const auto& mapping = mesh->get_bone_mapping();
 
     for (auto& trackPair : tracks) {
         std::string boneName = trackPair.first;
         
-        // Try exact match
+        // 尝试精确匹配骨骼名称
         if (mapping.find(boneName) == mapping.end()) {
-            // Try converting Half-width IK to Full-width ＩＫ
+            // 传奇编码问题之半角 IK 与全角ＩＫ
             size_t pos = boneName.find("IK");
             if (pos != std::string::npos) {
                 std::string fullWidthName = boneName;
@@ -118,6 +124,7 @@ void VMDAnimation::update(float frame, TriMesh* mesh) {
         
         if (keyframes.empty()) continue;
         
+        // 边界情况处理
         if (frame <= keyframes.front().frame) {
             bone.local_translation = keyframes.front().position;
             bone.local_rotation = keyframes.front().rotation;
@@ -129,13 +136,16 @@ void VMDAnimation::update(float frame, TriMesh* mesh) {
             continue;
         }
         
+        // 寻找当前帧的前后关键帧进行插值 (应该可以优化)
         for (size_t i = 0; i < keyframes.size() - 1; ++i) {
             if (frame >= keyframes[i].frame && frame < keyframes[i+1].frame) {
                 const auto& k1 = keyframes[i];
                 const auto& k2 = keyframes[i+1];
                 
+                // 插值系数 t in [0, 1]
                 float t = (frame - k1.frame) / (float)(k2.frame - k1.frame);
                 
+                // 线性插值
                 bone.local_translation = glm::mix(k1.position, k2.position, t);
                 bone.local_rotation = glm::slerp(k1.rotation, k2.rotation, t);
                 break;
@@ -143,5 +153,6 @@ void VMDAnimation::update(float frame, TriMesh* mesh) {
         }
     }
     
+    // 更新所有骨骼的全局变换矩阵
     mesh->update_bone_matrices();
 }

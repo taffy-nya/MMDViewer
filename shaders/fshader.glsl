@@ -14,13 +14,13 @@ uniform sampler2D textureSampler;
 uniform bool hasTexture;
 uniform sampler2D toonSampler;
 
-void main()
-{
+void main() {
     vec4 textureColor = vec4(1.0);
     if (hasTexture) {
+        // 采样纹理颜色
         textureColor = texture(textureSampler, UV);
     }
-    // 只使用物体颜色和贴图，不做任何光照
+    // 只使用物体颜色和贴图，不做光照计算
     vec4 finalColor = objectColor * textureColor;
     fColor = vec4(finalColor.rgb, finalColor.a);
 }

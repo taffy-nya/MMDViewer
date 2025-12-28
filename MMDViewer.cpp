@@ -23,7 +23,7 @@
 #include <commdlg.h>
 #include <mmsystem.h>
 
-// Helper to convert ANSI (Windows default) to UTF-8 for ImGui
+// 将 Windows 路径的 ANSI 编码转换为 UTF-8 编码
 std::string AnsiToUtf8(const std::string& str) {
     if (str.empty()) return "";
     int wlen = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, NULL, 0);
@@ -56,7 +56,7 @@ std::string open_file_dialog(const char* filter, GLFWwindow* window) {
     return "";
 }
 
-// --- Global Variables ---
+// 一些全局变量
 char pmx_path_buf[256] = "models/taffy/taffy.pmx";
 char vmd_path_buf[256] = "motions/TDA.vmd";
 char stage_path_buf[256] = "Default Grid";
@@ -71,23 +71,25 @@ bool mouse_left_pressed = false, mouse_right_pressed = false, mouse_middle_press
 double rotate_sensitivity = 0.2, translate_sensitivity = 0.05;
 double last_x, last_y;
 
-// Lighting
+// 光照
 std::vector<Light> lights;
 glm::vec3 ambient_color(1.0f, 1.0f, 1.0f);
 float ambient_strength = 1.0f;
 glm::vec4 clear_color = glm::vec4(0.5f, 0.6f, 0.7f, 1.0f);
 
-// Shadow Mapping
+// 阴影映射
 GLuint depthMapFBO;
 GLuint depthMap;
 const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
 
-// Animation timing
+// 动画
 float last_frame_time = 0.0f;
 float current_frame = 0.0f;
 bool is_playing = true;
 bool show_stage = true;
 bool enable_motion = false;
+
+// UI 控制
 bool show_light_gizmos = true;
 bool show_skeleton = false;
 bool manual_bone_control = false;
@@ -97,12 +99,12 @@ bool show_control_window = true;
 ImGuizmo::OPERATION current_gizmo_operation = ImGuizmo::ROTATE;
 ImGuizmo::MODE current_gizmo_mode = ImGuizmo::LOCAL;
 
-// FPS Limiter
+// FPS 限制
 int target_fps = 60;
 bool limit_fps = true;
 
-// --- Function Declarations ---
-void framebuffer_size_callback(GLFWwindow* w, int width, int height);
+// 函数声明
+void framebuffer_size_callback(GLFWwindow *w, int width, int height);
 void key_callback(GLFWwindow* w, int k, int s, int a, int m);
 void mouse_button_callback(GLFWwindow* w, int b, int a, int m);
 void cursor_position_callback(GLFWwindow* w, double x, double y);
@@ -115,13 +117,13 @@ void print_help();
 void load_model(const std::string& path);
 void load_motion(const std::string& path);
 
-// --- Initialization ---
+// 初始化
 void init() {
     camera = new Camera();
     painter = new MeshPainter();
     stage = new Stage(100.0f, 20);
     
-    // 初始添加一个平行光
+    // 初始添加一个平行光   // 初始不添加一个平行光
     // if (lights.empty()) {
     //     Light mainLight;
     //     mainLight.type = LIGHT_DIRECTIONAL;
@@ -134,16 +136,21 @@ void init() {
     load_model(pmx_path_buf);
     load_motion(vmd_path_buf);
 
-    // Configure Shadow Map FBO
+    // 配置阴影映射 FBO (Frame Buffer Object)
+    // 从光源的视角渲染场景，记录深度值到纹理中
     glGenFramebuffers(1, &depthMapFBO);
-    
+
+    // 创建深度纹理
     glGenTextures(1, &depthMap);
     glBindTexture(GL_TEXTURE_2D, depthMap);
+    // 设置纹理大小为 SHADOW_WIDTH * SHADOW_HEIGHT
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // 设置纹理比较模式, 用于在着色器中进行阴影测试
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    // 设置纹理环绕方式, 超出范围的部分设为白色 (深度 1.0), 避免阴影之外的区域产生错误阴影
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -151,13 +158,14 @@ void init() {
     
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    // 这里只关心深度, 不渲染颜色数据
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glClearColor(0.5f, 0.6f, 0.7f, 1.0f);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST); // 开启深度测试
+    glEnable(GL_BLEND);      // 开启混合 (用于透明材质)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
@@ -166,7 +174,6 @@ void load_model(const std::string& path) {
         delete mesh;
         mesh = nullptr;
     }
-    // Re-create painter to clear old mesh data
     if (painter) {
         delete painter;
         painter = new MeshPainter();
@@ -198,9 +205,9 @@ void load_motion(const std::string& path) {
 }
 
 
-// --- Render Loop ---
 void display() {
-    // 1. Shadow Pass
+    // 阴影
+    // 从光源的视角渲染场景，生成深度贴图
     glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -209,58 +216,62 @@ void display() {
     glm::mat4 lightSpaceMatrix;
     float near_plane = 1.0f, far_plane = 100.0f;
     
-    // Use the first light as the shadow caster
-    glm::vec3 lightPos = glm::vec3(-2.0f, 4.0f, -1.0f); // Default
+    // 使用第一个光源作为产生阴影的光源
+    glm::vec3 lightPos = glm::vec3(-2.0f, 4.0f, -1.0f); // 默认位置
     if (!lights.empty()) {
         if (lights[0].type == LIGHT_DIRECTIONAL) {
-             lightPos = -lights[0].direction * 20.0f; // Simulate a position for directional light
-             lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
+            // 平行光使用阴影正交投影矩阵
+            lightPos = -lights[0].direction * 20.0f;
+            lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
         } else {
-             lightPos = lights[0].position;
-             lightProjection = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
+            // 点光源使用透视投影
+            lightPos = lights[0].position;
+            lightProjection = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
         }
     } else {
          lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane);
     }
     
     lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
-    lightSpaceMatrix = lightProjection * lightView;
+    lightSpaceMatrix = lightProjection * lightView; // 光源空间的变换矩阵
     
-    // Cull front faces for shadow mapping to fix peter panning
-    // Removed global culling override to support double-sided materials
+    // 正面剔除对于双面材质可能会有问题，这里注释掉
     // glEnable(GL_CULL_FACE);
     // glCullFace(GL_FRONT);
     
     if (show_stage && stage) stage->draw_shadow(lightSpaceMatrix);
     painter->draw_shadow(lightSpaceMatrix);
     
-    // glCullFace(GL_BACK); // Reset culling
+    // glCullFace(GL_BACK); // 重置剔除设置
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // 2. Lighting Pass
+    // 光照
+    // 恢复正常的视口和帧缓冲，进行正常的场景渲染
     int width, height;
     glfwGetFramebufferSize(glfwGetCurrentContext(), &width, &height);
     glViewport(0, 0, width, height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
+    // 绘制场景和模型，传入阴影贴图和光空间矩阵用于计算阴影
     if (show_stage && stage) stage->draw(camera, lights, ambient_color, ambient_strength, depthMap, lightSpaceMatrix);
     painter->draw_meshes(camera, lights, ambient_color, ambient_strength, depthMap, lightSpaceMatrix);
+    
+    // 绘制辅助线框
     if (show_light_gizmos) painter->draw_light_gizmos(camera, lights);
     if (show_skeleton) painter->draw_skeleton(camera, selected_bone_index);
 }
 
-// --- Callbacks ---
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) { 
-    if (height == 0) height = 1; // Prevent divide by zero
+    if (height == 0) height = 1;
     glViewport(0, 0, width, height); 
-    // Check if camera is initialized before accessing it
     if (camera) {
         camera->aspect = (float)width / (float)height;
-        // camera->update_camera_vectors(); // Removed: This resets rotation to Euler angles
+        // camera->update_camera_vectors();
     }
 }
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+    // 根据两帧之间鼠标位置的变化移动
     double deltaX = xpos - last_x;
     double deltaY = ypos - last_y;
     
@@ -343,7 +354,7 @@ void reset() {
 }
 
 int main(int argc, char** argv) {
-    timeBeginPeriod(1);
+    timeBeginPeriod(1); // 提高定时器精度，不然 FPS 限制效果不太好
 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -356,7 +367,7 @@ int main(int argc, char** argv) {
         return -1;
     }
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(0); // Disable VSync to allow manual FPS limiting
+    glfwSwapInterval(0); // 禁用垂直同步以允许手动限制 FPS
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetKeyCallback(window, key_callback);
@@ -371,26 +382,27 @@ int main(int argc, char** argv) {
 
     init();
 
-    // 适应初始视口
+    // 由于窗口不是方的，会被拉伸，这里手动调整视口比例
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     framebuffer_size_callback(window, width, height);
 
     print_help();
 
-    // Setup Dear ImGui context
+    // ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
+    // 设置中文字体
     // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 20.0f);
     io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\msyh.ttc", 20.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
 
-    // Setup Dear ImGui style
+    // ImGui 样式
     ImGui::StyleColorsDark();
 
-    // Setup Platform/Renderer backends
+    // 设置 ImGui 的平台与渲染器后端
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     const char* glsl_version = "#version 330";
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -402,6 +414,7 @@ int main(int argc, char** argv) {
         float deltaTime = currentTime - last_frame_time;
         last_frame_time = currentTime;
 
+        // 动画更新逻辑
         if (enable_motion && !manual_bone_control) {
             if (is_playing && animation) {
                 // VMD 标准帧率为 30 FPS
@@ -409,6 +422,7 @@ int main(int argc, char** argv) {
                 if (current_frame >= animation->get_duration()) {
                     current_frame = 0.0f;
                 }
+                // 根据当前帧更新骨骼姿态
                 animation->update(current_frame, mesh);
             }
         } else if (!enable_motion && !manual_bone_control) {
@@ -418,12 +432,13 @@ int main(int argc, char** argv) {
             }
         }
         
-        // Always update matrices if mesh exists
+        // 这里需要更新骨骼矩阵
+        // 因为 T-Pose 或手动控制，骨骼矩阵也需要重新计算并传递给着色器
         if (mesh) {
             mesh->update_bone_matrices();
         }
 
-        // Start the Dear ImGui frame
+        // ImGui 控制界面
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -433,7 +448,7 @@ int main(int argc, char** argv) {
             ImGui::Begin("MMD Viewer Controls");
             
             if (ImGui::BeginTabBar("ControlTabs")) {
-                
+                // General 标签页，显示 FPS、相机重置、背景色等
                 if (ImGui::BeginTabItem("General")) {
                     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
                     ImGui::Separator();
@@ -453,6 +468,7 @@ int main(int argc, char** argv) {
                     ImGui::EndTabItem();
                 }
 
+                // Model 标签页，加载模型与动作，调整模型变换与动画播放
                 if (ImGui::BeginTabItem("Model")) {
                     ImGui::Text("Current Model: %s", AnsiToUtf8(pmx_path_buf).c_str());
                     if (ImGui::Button("Load Model (.pmx)")) {
@@ -474,7 +490,6 @@ int main(int argc, char** argv) {
                     ImGui::Separator();
                     ImGui::Text("Transform");
                     if (mesh) {
-                        // Position
                         glm::vec3 pos = mesh->get_translation();
                         if (ImGui::DragFloat3("##Pos", (float*)&pos, 0.1f)) {
                             mesh->set_translation(pos);
@@ -486,7 +501,6 @@ int main(int argc, char** argv) {
                         ImGui::SameLine();
                         ImGui::Text("Position");
 
-                        // Rotation
                         glm::vec3 rot = mesh->get_rotation();
                         if (ImGui::DragFloat3("##Rot", (float*)&rot, 1.0f)) {
                             mesh->set_rotation(rot);
@@ -498,7 +512,6 @@ int main(int argc, char** argv) {
                         ImGui::SameLine();
                         ImGui::Text("Rotation");
 
-                        // Scale
                         glm::vec3 scale = mesh->get_scale();
                         if (ImGui::DragFloat3("##Scale", (float*)&scale, 0.01f)) {
                             mesh->set_scale(scale);
@@ -510,7 +523,7 @@ int main(int argc, char** argv) {
                         ImGui::SameLine();
                         ImGui::Text("Scale");
                     }
-
+                    // 动画控制
                     ImGui::Separator();
                     ImGui::Text("Animation");
                     ImGui::Checkbox("Enable Motion", &enable_motion);
@@ -520,6 +533,7 @@ int main(int argc, char** argv) {
                     ImGui::EndTabItem();
                 }
 
+                // Skeleton 标签页，显示骨骼列表与手动控制选项
                 if (ImGui::BeginTabItem("Skeleton")) {
                     ImGui::Checkbox("Show Skeleton", &show_skeleton);
                     ImGui::Checkbox("Manual Control", &manual_bone_control);
@@ -529,7 +543,6 @@ int main(int argc, char** argv) {
                     }
 
                     ImGui::Separator();
-                    // Reset all bone local transforms
                     if (mesh) {
                         if (ImGui::Button("Reset All Bones")) {
                             mesh->reset_pose();
@@ -541,7 +554,7 @@ int main(int argc, char** argv) {
                     if (mesh) {
                         auto& bones = mesh->get_bones();
                         
-                        // Left pane: Bone List
+                        // 左边显示骨骼列表
                         ImGui::BeginChild("BoneList", ImVec2(150, 0), true);
                         for (int i = 0; i < bones.size(); ++i) {
                             std::string label = std::to_string(i) + ": " + bones[i].name;
@@ -553,7 +566,7 @@ int main(int argc, char** argv) {
                         
                         ImGui::SameLine();
                         
-                        // Right pane: Bone Details
+                        // 右边显示骨骼详情
                         ImGui::BeginGroup();
                         if (selected_bone_index >= 0 && selected_bone_index < bones.size()) {
                             PMXBone& bone = bones[selected_bone_index];
@@ -564,21 +577,21 @@ int main(int argc, char** argv) {
                             ImGui::Separator();
                             
                             if (manual_bone_control) {
-                                // Gizmo Operation Selection
+                                // 选择变换操作（通过 ImGuizmo 控件）
                                 if (ImGui::RadioButton("Rotate", current_gizmo_operation == ImGuizmo::ROTATE)) current_gizmo_operation = ImGuizmo::ROTATE;
                                 ImGui::SameLine();
                                 if (ImGui::RadioButton("Translate", current_gizmo_operation == ImGuizmo::TRANSLATE)) current_gizmo_operation = ImGuizmo::TRANSLATE;
                                 
-                                // Translation
+                                // 平移
                                 ImGui::Text("Local Translation");
                                 if (ImGui::DragFloat3("##BoneTrans", (float*)&bone.local_translation, 0.01f)) {
-                                    // Modified
+                                    // 直接修改 local_translation 即可
                                 }
                                 if (ImGui::Button("Reset Trans")) {
                                     bone.local_translation = glm::vec3(0.0f);
                                 }
                                 
-                                // Rotation
+                                // 旋转
                                 ImGui::Text("Local Rotation");
                                 glm::vec3 euler = glm::degrees(glm::eulerAngles(bone.local_rotation));
                                 if (ImGui::DragFloat3("##BoneRot", (float*)&euler, 1.0f)) {
@@ -588,7 +601,7 @@ int main(int argc, char** argv) {
                                     bone.local_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
                                 }
 
-                                // ImGuizmo Logic moved to end of frame
+                                // ImGuizmo 返回的矩阵变换在后面处理
                             } else {
                                 ImGui::TextColored(ImVec4(1, 0, 0, 1), "Enable Manual Control to edit");
                                 ImGui::Text("Translation: %.2f, %.2f, %.2f", bone.local_translation.x, bone.local_translation.y, bone.local_translation.z);
@@ -605,7 +618,7 @@ int main(int argc, char** argv) {
                     
                     ImGui::EndTabItem();
                 }
-
+                // Stage 标签页，加载与显示舞台
                 if (ImGui::BeginTabItem("Stage")) {
                     ImGui::Checkbox("Show Stage", &show_stage);
                     ImGui::Text("Current Stage: %s", AnsiToUtf8(stage_path_buf).c_str());
@@ -623,7 +636,7 @@ int main(int argc, char** argv) {
                     }
                     ImGui::EndTabItem();
                 }
-
+                // Lighting 标签页，管理光源与环境光
                 if (ImGui::BeginTabItem("Lighting")) {
                     ImGui::Checkbox("Show Light Gizmos", &show_light_gizmos);
                     ImGui::Text("Ambient Light");
@@ -632,10 +645,10 @@ int main(int argc, char** argv) {
 
                     ImGui::Separator();
                     ImGui::Text("Dynamic Lights");
-                    if (ImGui::Button("Add Point Light")) {
+                    if (ImGui::Button("Add Light")) {
                         if (lights.size() < 16) {
                             Light l;
-                            l.type = LIGHT_POINT;
+                            l.type = lights.empty() ? LIGHT_DIRECTIONAL : LIGHT_POINT;
                             l.position = glm::vec3(0.0f, 10.0f, 0.0f);
                             lights.push_back(l);
                         }
@@ -651,7 +664,6 @@ int main(int argc, char** argv) {
                         if (ImGui::Button("Reset Selected Light")) {
                             if (selected_light_index >= 0 && selected_light_index < (int)lights.size()) {
                                 Light &l = lights[selected_light_index];
-                                // Common defaults
                                 l.color = glm::vec3(1.0f);
                                 l.intensity = 1.0f;
                                 l.enabled = true;
@@ -685,7 +697,7 @@ int main(int argc, char** argv) {
 
                     for (int i = 0; i < lights.size(); ++i) {
                         ImGui::PushID(i);
-                        // Highlight selected light in tree
+                        // 高亮选中的光源
                         bool isSelected = (selected_light_index == i);
                         ImGuiTreeNodeFlags flags = isSelected ? ImGuiTreeNodeFlags_Selected : 0;
                         bool isOpen = ImGui::TreeNodeEx(("Light " + std::to_string(i)).c_str(), flags);
@@ -701,11 +713,7 @@ int main(int argc, char** argv) {
                             ImGui::Combo("Type", &lights[i].type, types, IM_ARRAYSIZE(types));
                             
                             if (lights[i].type == LIGHT_DIRECTIONAL) {
-                                // Convert direction to Euler angles (Pitch/Yaw) for easier editing
-                                // Direction is usually normalized.
-                                // Pitch: rotation around X, Yaw: rotation around Y
-                                // We can use asin/atan2 to get angles.
-                                // Assuming direction is (x, y, z)
+                                // 更新方向光的方向
                                 // Pitch = asin(-y)
                                 // Yaw = atan2(x, z)
                                 
@@ -742,7 +750,7 @@ int main(int argc, char** argv) {
                                 if (selected_light_index == i) selected_light_index = -1;
                                 ImGui::TreePop();
                                 ImGui::PopID();
-                                i--; // Adjust index
+                                i--;
                                 continue; 
                             }
                             
@@ -759,7 +767,7 @@ int main(int argc, char** argv) {
             ImGui::End();
         }
 
-        // ImGuizmo Logic - Moved outside of any ImGui window to avoid coordinate system inheritance issues
+        // 通过 ImGuizmo 返回的矩阵变换来更新骨骼或灯光
         if (camera) {
             ImGuizmo::SetOrthographic(false);
             ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList());
@@ -768,9 +776,9 @@ int main(int argc, char** argv) {
             glm::mat4 view = camera->get_view_matrix();
             glm::mat4 projection = camera->get_projection_matrix();
 
-            // 1. Bone Control
+            // 骨骼控制
             if (manual_bone_control && mesh && selected_bone_index >= 0) {
-                // Deselect light if bone is selected (handled in UI logic, but good to be safe)
+                // 如果选择了骨骼，取消选择灯光
                 selected_light_index = -1;
 
                 auto& bones = mesh->get_bones();
@@ -797,20 +805,22 @@ int main(int argc, char** argv) {
                         glm::vec4 perspective;
                         glm::decompose(localTransform, scale, rotation, translation, skew, perspective);
                         
-                        // Calculate relative position (Bind Pose offset) to correct translation
+                        // 计算相对位置以修正平移
                         glm::vec3 parentPos = glm::vec3(0.0f);
                         if (bone.parent_index != -1) {
                             parentPos = bones[bone.parent_index].position;
                         }
                         glm::vec3 relativePos = bone.position - parentPos;
 
+                        // 大坑：ImGuizmo 的变换矩阵包含了骨骼相对于父骨骼的完整位移
+                        // 但是这里 local_translation 仅存储偏移量，需要减去初始相对位置
                         bone.local_translation = translation - relativePos;
                         bone.local_rotation = rotation;
                     }
                 }
             }
             
-            // 2. Light Control
+            // 灯光控制
             if (show_light_gizmos && selected_light_index >= 0 && selected_light_index < lights.size()) {
                 Light& light = lights[selected_light_index];
                 glm::mat4 transform = glm::mat4(1.0f);
@@ -818,25 +828,14 @@ int main(int argc, char** argv) {
                 if (light.type == LIGHT_POINT) {
                     transform = glm::translate(transform, light.position);
                 } else {
-                    // For directional light, visualize it at a fixed distance or center
-                    // But direction is a vector, not a point. 
-                    // We can visualize rotation.
-                    // Let's place the gizmo at (0, 10, 0) or some visible place, and only allow rotation.
+                    // 平行光
+                    // gizmo 放在 (0, 10, 0)
                     glm::vec3 displayPos = glm::vec3(0.0f, 10.0f, 0.0f); 
                     transform = glm::translate(transform, displayPos);
                     
-                    // Create rotation from default direction (0, -1, 0) or (0,0,-1) to light.direction
-                    // Assuming light.direction is normalized
-                    glm::vec3 defaultDir = glm::vec3(0.0f, -1.0f, 0.0f); // Standard down
-                    // Actually, let's just use LookAt logic or Quat rotation
-                    // But simpler: just use the rotation part of the matrix
-                    // We need to construct a rotation matrix that points -Y to light.direction
-                    // Or just use the gizmo to get a new rotation and extract direction.
+                    glm::vec3 defaultDir = glm::vec3(0.0f, -1.0f, 0.0f); // 向下
                     
-                    // Let's use a helper:
-                    // We want to edit 'light.direction'.
-                    // Gizmo gives us a rotation.
-                    // We can represent the current direction as a rotation from (0, -1, 0).
+                    // 计算从默认方向 (0, -1, 0) 到当前方向的旋转
                     glm::quat q = glm::rotation(glm::vec3(0.0f, -1.0f, 0.0f), glm::normalize(light.direction));
                     transform = transform * glm::toMat4(q);
                 }
@@ -850,9 +849,6 @@ int main(int argc, char** argv) {
                     if (light.type == LIGHT_POINT) {
                         light.position = glm::vec3(transform[3]);
                     } else {
-                        // Extract direction from rotation
-                        // Transform (0, -1, 0) by the new rotation matrix
-                        // The rotation matrix is the upper-left 3x3 of transform
                         glm::mat3 rotMat = glm::mat3(transform);
                         light.direction = glm::normalize(rotMat * glm::vec3(0.0f, -1.0f, 0.0f));
                     }
@@ -869,18 +865,17 @@ int main(int argc, char** argv) {
         
         glfwPollEvents();
 
-        // FPS Limiter
+        // FPS 限制
         if (limit_fps && target_fps > 0) {
             float frameTime = (float)glfwGetTime() - currentTime;
             float targetFrameTime = 1.0f / (float)target_fps;
             if (frameTime < targetFrameTime) {
                 float sleepTime = targetFrameTime - frameTime;
-                if (sleepTime > 0.002f) { // Sleep if more than 2ms remaining
-                     Sleep((DWORD)(sleepTime * 1000.0f - 1.0f)); 
+                if (sleepTime > 0.002f) { // 如果剩余时间超过 2ms 则休眠
+                    Sleep((DWORD)(sleepTime * 1000.0f - 1.0f)); 
                 }
-                // Busy wait for the rest
                 while ((float)glfwGetTime() - currentTime < targetFrameTime) {
-                    // spin
+                    // 等
                 }
             }
         }

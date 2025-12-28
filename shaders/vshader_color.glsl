@@ -1,11 +1,12 @@
 #version 330 core
 layout (location = 0) in vec3 aPos;
 
+// 变换矩阵
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-void main()
-{
+void main() {
+    // 计算裁剪空间中的顶点位置
     gl_Position = projection * view * model * vec4(aPos, 1.0);
 }

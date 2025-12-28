@@ -4,16 +4,16 @@
 #include <string>
 
 Stage::Stage(float size, int divisions) {
-    // 1. Generate Grid Lines
+    // 生成默认场景的网格线
     std::vector<glm::vec3> line_vertices;
     float step = size * 2 / divisions;
 
     for (int i = 0; i <= divisions; ++i) {
         float pos = -size + i * step;
-        // Line parallel to X-axis
-        line_vertices.push_back(glm::vec3(-size, 0.01f, pos)); // Slightly raised to avoid z-fighting
+        // 平行于 X 轴的线
+        line_vertices.push_back(glm::vec3(-size, 0.01f, pos)); // 稍微抬高一点
         line_vertices.push_back(glm::vec3(size, 0.01f, pos));
-        // Line parallel to Z-axis
+        // 平行于 Z 轴的线
         line_vertices.push_back(glm::vec3(pos, 0.01f, -size));
         line_vertices.push_back(glm::vec3(pos, 0.01f, size));
     }
@@ -30,10 +30,9 @@ Stage::Stage(float size, int divisions) {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glEnableVertexAttribArray(0);
 
-    // 2. Generate Plane with Normals
-    // Format: Pos(3), Normal(3)
+    // 生成地面平面
     float plane_data[] = {
-        // Pos                  // Normal
+        // 位置                  // 法线 (向上)
         -size, 0.0f, -size,     0.0f, 1.0f, 0.0f,
         -size, 0.0f,  size,     0.0f, 1.0f, 0.0f,
          size, 0.0f,  size,     0.0f, 1.0f, 0.0f,
@@ -49,16 +48,14 @@ Stage::Stage(float size, int divisions) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo_plane);
     glBufferData(GL_ARRAY_BUFFER, sizeof(plane_data), plane_data, GL_STATIC_DRAW);
 
-    // Position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
-    // Normal
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
 
-    // 3. Load Shader for Plane (Lit)
+    // 加载地面平面 shader (有光照)
     program = InitShader("shaders/vshader_stage.glsl", "shaders/fshader_stage.glsl");
 
     model_loc = glGetUniformLocation(program, "model");
@@ -84,16 +81,16 @@ Stage::Stage(float size, int divisions) {
         light_locations[i].enabled = glGetUniformLocation(program, (base + ".enabled").c_str());
     }
 
-    // Shadow Uniforms
+    // 阴影
     shadowMap_loc = glGetUniformLocation(program, "shadowMap");
     lightSpaceMatrix_loc = glGetUniformLocation(program, "lightSpaceMatrix");
 
-    // Shadow Pass Program
+    // 阴影生成 shader
     shadow_program = InitShader("shaders/vshader_shadow_static.glsl", "shaders/fshader_shadow.glsl");
     shadow_model_loc = glGetUniformLocation(shadow_program, "model");
     shadow_lightSpaceMatrix_loc = glGetUniformLocation(shadow_program, "lightSpaceMatrix");
 
-    // 4. Load Shader for Lines (Unlit)
+    // 网格线 shader (无光照)
     program_lines = InitShader("shaders/vshader_color.glsl", "shaders/fshader_color.glsl");
     model_loc_lines = glGetUniformLocation(program_lines, "model");
     view_loc_lines = glGetUniformLocation(program_lines, "view");
@@ -115,7 +112,7 @@ Stage::~Stage() {
 }
 
 void Stage::load_pmx(const std::string& filename) {
-    use_default_grid(); // Clean up first
+    use_default_grid();
 
     stage_mesh = new TriMesh();
     stage_mesh->read_pmx(filename);
@@ -163,7 +160,7 @@ void Stage::draw(Camera* camera, const std::vector<Light>& lights, const glm::ve
     glm::mat4 projection = camera->get_projection_matrix();
     glm::vec3 viewPos = camera->position;
 
-    // 1. Draw Plane (Lit)
+    // 绘制地面平面
     glUseProgram(program);
     
     glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model));
@@ -171,13 +168,14 @@ void Stage::draw(Camera* camera, const std::vector<Light>& lights, const glm::ve
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, glm::value_ptr(projection));
     glUniform3fv(view_pos_loc, 1, glm::value_ptr(viewPos));
     
+    // 阴影相关
     glUniformMatrix4fv(lightSpaceMatrix_loc, 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
     
     glActiveTexture(GL_TEXTURE10);
     glBindTexture(GL_TEXTURE_2D, shadowMap);
     glUniform1i(shadowMap_loc, 10);
     
-    glUniform4f(color_loc, 1.0f, 1.0f, 1.0f, 1.0f); // White plane
+    glUniform4f(color_loc, 1.0f, 1.0f, 1.0f, 1.0f); // 白色平面
     
     glUniform3fv(ambient_color_loc, 1, glm::value_ptr(ambientColor));
     glUniform1f(ambient_strength_loc, ambientStrength);
@@ -200,7 +198,7 @@ void Stage::draw(Camera* camera, const std::vector<Light>& lights, const glm::ve
     glBindVertexArray(vao_plane);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
-    // 2. Draw Lines (Unlit)
+    // 绘制网格线
     glUseProgram(program_lines);
 
     glUniformMatrix4fv(model_loc_lines, 1, GL_FALSE, glm::value_ptr(model));
@@ -208,7 +206,7 @@ void Stage::draw(Camera* camera, const std::vector<Light>& lights, const glm::ve
     glUniformMatrix4fv(proj_loc_lines, 1, GL_FALSE, glm::value_ptr(projection));
     
     glBindVertexArray(vao_lines);
-    glUniform3f(color_loc_lines, 0.5f, 0.5f, 0.5f); // Gray lines
+    glUniform3f(color_loc_lines, 0.5f, 0.5f, 0.5f); // 灰色线条
     glDrawArrays(GL_LINES, 0, line_vertex_count);
 
     glBindVertexArray(0);

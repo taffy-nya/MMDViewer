@@ -16,7 +16,6 @@
 #include <iomanip>
 #include <cstring>
 
-// --- Helper Functions ---
 unsigned int read_index(std::ifstream& file, int size) {
     unsigned int index = 0; char buffer[4]; file.read(buffer, size); if (!file) return -1;
     switch (size) {
@@ -50,7 +49,6 @@ void skip_pmx_string(std::ifstream& file) {
     if (file && string_length > 0) file.seekg(string_length, std::ios_base::cur);
 }
 
-// --- TriMesh Class Implementation ---
 TriMesh::TriMesh() {}
 TriMesh::~TriMesh() { clean_data(); }
 void TriMesh::clean_data() { vertex_positions.clear(); vertex_normals.clear(); vertex_uvs.clear(); vertex_bone_data.clear(); faces.clear(); materials.clear(); textures.clear(); bones.clear(); bone_mapping.clear(); }
@@ -60,25 +58,32 @@ void TriMesh::read_pmx(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) { return; }
 
-    // --- Header ---
+    // 头部
     char magic[4]; file.read(magic, 4);
-    float version; file.read(reinterpret_cast<char*>(&version), 4);
+    if (strncmp(magic, "PMX ", 4) != 0) {
+        std::cerr << "Not a valid PMX file." << std::endl;
+        return;
+    }
+
+    float version; file.read(reinterpret_cast<char *>(&version), 4);
     unsigned char global_info_size; file.read(reinterpret_cast<char*>(&global_info_size), 1);
     unsigned char g_info[8]; file.read(reinterpret_cast<char*>(g_info), global_info_size);
     unsigned char text_encoding = g_info[0], uv_size = g_info[1], vertex_index_size = g_info[2], texture_index_size = g_info[3],
                   material_index_size = g_info[4], bone_index_size = g_info[5], morph_index_size = g_info[6], rigid_body_index_size = g_info[7];
+    // 模型名称、描述之类的，跳过
     skip_pmx_string(file); skip_pmx_string(file); skip_pmx_string(file); skip_pmx_string(file);
 
-    // --- Vertices ---
+    // 顶点
     int num_vertices; file.read(reinterpret_cast<char*>(&num_vertices), 4);
     vertex_positions.reserve(num_vertices); vertex_normals.reserve(num_vertices); vertex_uvs.reserve(num_vertices); vertex_bone_data.reserve(num_vertices);
     for (int i = 0; i < num_vertices; ++i) {
         glm::vec3 pos, normal; glm::vec2 uv;
         file.read(reinterpret_cast<char*>(&pos), 12);
         file.read(reinterpret_cast<char*>(&normal), 12);
-        file.read(reinterpret_cast<char*>(&uv), 8);
-        pos.z = -pos.z; normal.z = -normal.z; // Coordinate system conversion
-        uv.y = 1.0f - uv.y; // UV coordinate conversion
+        file.read(reinterpret_cast<char *>(&uv), 8);
+        // 超级大坑：MMD 坐标系是左手系，OpenGL 是右手系，要反转 z 轴和 uv.y
+        pos.z = -pos.z; normal.z = -normal.z;
+        uv.y = 1.0f - uv.y;
         vertex_positions.push_back(pos);
         vertex_normals.push_back(normal);
         vertex_uvs.push_back(uv);
@@ -87,15 +92,12 @@ void TriMesh::read_pmx(const std::string& filename) {
         unsigned char weight_type; file.read(reinterpret_cast<char*>(&weight_type), 1);
         VertexBoneData boneData;
         switch (weight_type) {
-            case 0: // BDEF1
-            {
+            case 0: { // BDEF1 (单骨骼
                 int b1 = read_index(file, bone_index_size);
                 boneData.bone_indices[0] = b1;
                 boneData.bone_weights[0] = 1.0f;
                 break;
-            }
-            case 1: // BDEF2
-            {
+            } case 1: { // BDEF2 (双骨骼)
                 int b1 = read_index(file, bone_index_size);
                 int b2 = read_index(file, bone_index_size);
                 float w1; file.read(reinterpret_cast<char*>(&w1), 4);
@@ -104,9 +106,7 @@ void TriMesh::read_pmx(const std::string& filename) {
                 boneData.bone_weights[0] = w1;
                 boneData.bone_weights[1] = 1.0f - w1;
                 break;
-            }
-            case 2: // BDEF4
-            {
+            } case 2: { // BDEF4 (四骨骼)
                 int b1 = read_index(file, bone_index_size);
                 int b2 = read_index(file, bone_index_size);
                 int b3 = read_index(file, bone_index_size);
@@ -125,21 +125,17 @@ void TriMesh::read_pmx(const std::string& filename) {
                 boneData.bone_weights[2] = w3;
                 boneData.bone_weights[3] = w4;
                 break;
-            }
-            case 3: // SDEF
-            {
+            } case 3: { // SDEF (球形混合，这里简化为 BDEF2)
                 int b1 = read_index(file, bone_index_size);
                 int b2 = read_index(file, bone_index_size);
                 float w1; file.read(reinterpret_cast<char*>(&w1), 4);
-                file.seekg(36, std::ios::cur); // Skip C, R0, R1
+                file.seekg(36, std::ios::cur); // 跳过 C, R0, R1
                 boneData.bone_indices[0] = b1;
                 boneData.bone_indices[1] = b2;
                 boneData.bone_weights[0] = w1;
                 boneData.bone_weights[1] = 1.0f - w1;
                 break;
-            }
-            case 4: // QDEF
-            {
+            } case 4: { // QDEF (四元数混合，这里简化为 BDEF4)
                 int b1 = read_index(file, bone_index_size);
                 int b2 = read_index(file, bone_index_size);
                 int b3 = read_index(file, bone_index_size);
@@ -161,27 +157,27 @@ void TriMesh::read_pmx(const std::string& filename) {
             }
         }
         vertex_bone_data.push_back(boneData);
-        file.seekg(4, std::ios::cur); // Edge scale
+        file.seekg(4, std::ios::cur); // 跳过边缘数据
     }
 
-    // --- Faces ---
+    // 面
     int num_face_indices; file.read(reinterpret_cast<char*>(&num_face_indices), 4);
     faces.reserve(num_face_indices / 3);
     for (int i = 0; i < num_face_indices / 3; ++i) {
         unsigned int v1 = read_index(file, vertex_index_size);
         unsigned int v2 = read_index(file, vertex_index_size);
         unsigned int v3 = read_index(file, vertex_index_size);
-        faces.emplace_back(v1, v3, v2); // Swap v2 and v3 for coordinate system
+        faces.emplace_back(v1, v3, v2); // 交换 v2 和 v3 以适应坐标系
     }
 
-    // --- Textures ---
+    // 纹理
     int num_textures; file.read(reinterpret_cast<char*>(&num_textures), 4);
     textures.reserve(num_textures);
     for (int i = 0; i < num_textures; ++i) {
         textures.push_back({read_pmx_string(file, text_encoding)});
     }
 
-    // --- Materials ---
+    // 材质
     int num_materials; file.read(reinterpret_cast<char*>(&num_materials), 4);
     materials.reserve(num_materials);
     for (int i = 0; i < num_materials; ++i) {
@@ -192,7 +188,7 @@ void TriMesh::read_pmx(const std::string& filename) {
         file.read(reinterpret_cast<char*>(&mat.shininess), 4);
         file.read(reinterpret_cast<char*>(&mat.ambient_color), 12);
         unsigned char draw_flags; file.read(reinterpret_cast<char*>(&draw_flags), 1);
-        mat.draw_flags = draw_flags; // Store flags
+        mat.draw_flags = draw_flags;
         file.read(reinterpret_cast<char*>(&mat.edge_color), 16);
         file.read(reinterpret_cast<char*>(&mat.edge_size), 4);
         mat.texture_index = read_index(file, texture_index_size);
@@ -202,8 +198,7 @@ void TriMesh::read_pmx(const std::string& filename) {
         if (toon_ref_type == 0) { 
             mat.toon_texture_index = read_index(file, texture_index_size); 
             mat.use_internal_toon = false;
-        }
-        else { 
+        } else { 
             unsigned char internal_index; file.read(reinterpret_cast<char*>(&internal_index), 1); 
             mat.toon_texture_index = internal_index; 
             mat.use_internal_toon = true;
@@ -213,46 +208,46 @@ void TriMesh::read_pmx(const std::string& filename) {
         materials.push_back(mat);
     }
 
-    // --- Bones ---
+    // 骨骼
     int num_bones; file.read(reinterpret_cast<char*>(&num_bones), 4);
     bones.resize(num_bones);
     
-    for(int i=0; i<num_bones; ++i) {
+    for (int i = 0; i < num_bones; ++i) {
         PMXBone& bone = bones[i];
         bone.name = read_pmx_string(file, text_encoding);
         bone_mapping[bone.name] = i;
-        skip_pmx_string(file); // English name
+        skip_pmx_string(file); // 跳过英文名
         file.read(reinterpret_cast<char*>(&bone.position), 12);
-        bone.position.z = -bone.position.z; // Coordinate fix
+        bone.position.z = -bone.position.z; // 坐标系转换
         bone.parent_index = read_index(file, bone_index_size);
         int transform_level; file.read(reinterpret_cast<char*>(&transform_level), 4);
         unsigned short flags; file.read(reinterpret_cast<char*>(&flags), 2);
         bone.flags = flags;
         
-        if (flags & 0x0001) { // Connection: 1 = Bone Index, 0 = Offset
+        if (flags & 0x0001) { // 连接方式: 1 = 骨骼索引, 0 = 偏移量
             read_index(file, bone_index_size);
         } else {
             file.seekg(12, std::ios::cur);
         }
         
-        if (flags & 0x0100 || flags & 0x0200) { // Rotation/Translation Append
+        if (flags & 0x0100 || flags & 0x0200) { // 旋转/平移 继承
              bone.inherit_parent_index = read_index(file, bone_index_size);
              file.read(reinterpret_cast<char*>(&bone.inherit_influence), 4);
         }
         
-        if (flags & 0x0400) { // Fixed Axis
+        if (flags & 0x0400) { // 固定轴
             file.seekg(12, std::ios::cur);
         }
         
-        if (flags & 0x0800) { // Local Axis
+        if (flags & 0x0800) { // 本地轴
             file.seekg(24, std::ios::cur);
         }
         
-        if (flags & 0x2000) { // External Parent Deform
+        if (flags & 0x2000) { // 外部父骨骼变形
             int key; file.read(reinterpret_cast<char*>(&key), 4);
         }
 
-        if (flags & 0x0020) { // IK
+        if (flags & 0x0020) { // IK (反向动力学)
             bone.ik_target_index = read_index(file, bone_index_size);
             file.read(reinterpret_cast<char*>(&bone.ik_loop_count), 4);
             file.read(reinterpret_cast<char*>(&bone.ik_limit_angle), 4);
@@ -269,14 +264,15 @@ void TriMesh::read_pmx(const std::string& filename) {
             }
         }
         
-        // Calculate Offset Matrix (Inverse Bind Pose)
+        // 计算偏移矩阵 (逆绑定姿势矩阵)
+        // 用于将顶点从模型空间变换到骨骼空间
         bone.offset_matrix = glm::translate(glm::mat4(1.0f), -bone.position);
     }
 
     file.close();
 }
 
-// Helper to update a single bone's global transform
+// 更新单个骨骼的全局变换
 void update_global_transform(std::vector<PMXBone>& bones, int index) {
     PMXBone& bone = bones[index];
     glm::vec3 parentPos = glm::vec3(0.0f);
@@ -289,9 +285,9 @@ void update_global_transform(std::vector<PMXBone>& bones, int index) {
     
     glm::vec3 relativePos = bone.position - parentPos;
     
-    // Apply Inheritance (Rotation)
+    // 应用继承 (旋转)
     glm::quat rotation = bone.local_rotation;
-    if (bone.inherit_parent_index != -1 && (bone.flags & 0x0100)) { // Rotation Inherit
+    if (bone.inherit_parent_index != -1 && (bone.flags & 0x0100)) { // 旋转继承
         PMXBone& inheritParent = bones[bone.inherit_parent_index];
         glm::quat parentRot = inheritParent.local_rotation;
         if (bone.inherit_influence != 1.0f) {
@@ -300,9 +296,9 @@ void update_global_transform(std::vector<PMXBone>& bones, int index) {
         rotation = parentRot * rotation;
     }
 
-    // Apply Inheritance (Translation)
+    // 应用继承 (平移)
     glm::vec3 translation = bone.local_translation;
-    if (bone.inherit_parent_index != -1 && (bone.flags & 0x0200)) { // Translation Inherit
+    if (bone.inherit_parent_index != -1 && (bone.flags & 0x0200)) { // 平移继承
         PMXBone& inheritParent = bones[bone.inherit_parent_index];
         glm::vec3 parentTrans = inheritParent.local_translation;
         translation += parentTrans * bone.inherit_influence;
@@ -315,13 +311,14 @@ void update_global_transform(std::vector<PMXBone>& bones, int index) {
     bone.global_transform = parentGlobal * local;
 }
 
+// 基于 CCD 的 IK 求解
 void solve_ik(std::vector<PMXBone>& bones, int ikBoneIndex) {
     PMXBone& ikBone = bones[ikBoneIndex];
     if (ikBone.ik_target_index == -1) return;
 
     PMXBone& targetBone = bones[ikBone.ik_target_index];
 
-    // IK Loop
+    // IK 循环
     for (int iter = 0; iter < ikBone.ik_loop_count; ++iter) {
         bool converged = true;
         
@@ -329,26 +326,18 @@ void solve_ik(std::vector<PMXBone>& bones, int ikBoneIndex) {
             IKLink& link = ikBone.ik_links[i];
             PMXBone& linkBone = bones[link.bone_index];
             
-            // Current Effector Position (Target Bone's current global position)
-            // We need to re-calculate global transforms for the chain to get accurate positions
-            // But for performance, we assume they are updated or we update them as we go.
-            // Since we modify linkBone, we must update the chain from linkBone downwards.
-            
-            // For simplicity in this iteration, let's just use current global_transform[3]
-            // But we really should update the chain.
-            // Let's assume UpdateGlobalTransform is called for the whole chain before IK.
-            
+            // 当前末端执行器位置
             glm::vec3 effectorPos = glm::vec3(targetBone.global_transform[3]);
-            glm::vec3 targetPos = glm::vec3(ikBone.global_transform[3]); // The IK bone is the goal position
+            glm::vec3 targetPos = glm::vec3(ikBone.global_transform[3]); // IK 骨骼是目标位置
             
             glm::vec3 linkPos = glm::vec3(linkBone.global_transform[3]);
             
             glm::vec3 toEffector = glm::normalize(effectorPos - linkPos);
             glm::vec3 toTarget = glm::normalize(targetPos - linkPos);
             
-            // Calculate rotation to bring effector to target
+            // 计算将末端执行器带到目标的旋转
             float dot = glm::dot(toEffector, toTarget);
-            if (glm::abs(dot) > 0.9999f) continue; // Already aligned
+            if (glm::abs(dot) > 0.9999f) continue; // 已经对齐
             
             float angle = glm::acos(glm::clamp(dot, -1.0f, 1.0f));
             if (glm::abs(angle) < 0.0001f) continue;
@@ -361,9 +350,7 @@ void solve_ik(std::vector<PMXBone>& bones, int ikBoneIndex) {
             if (glm::length(axis) < 0.0001f) continue;
             axis = glm::normalize(axis);
             
-            // Convert axis to local space of linkBone
-            // Parent Global Rotation * Local Rotation = Global Rotation
-            // So Local Axis = inverse(Parent Global Rotation) * Global Axis
+            // 将轴转换为 linkBone 的局部空间
             glm::mat4 parentGlobal = glm::mat4(1.0f);
             if (linkBone.parent_index != -1) {
                 parentGlobal = bones[linkBone.parent_index].global_transform;
@@ -375,40 +362,23 @@ void solve_ik(std::vector<PMXBone>& bones, int ikBoneIndex) {
             linkBone.local_rotation = deltaRot * linkBone.local_rotation;
             linkBone.local_rotation = glm::normalize(linkBone.local_rotation);
             
-            // Apply Limits
+            // 应用限制
             if (link.has_limits) {
-                // Simple Knee Limit (X-axis only)
-                // Check if it's a knee-like limit (min/max y and z are near 0)
+                // 简单的膝盖限制 (min/max y 和 z 的限制接近 0)
                 if (glm::abs(link.min_limit.y) < 0.001f && glm::abs(link.max_limit.y) < 0.001f &&
                     glm::abs(link.min_limit.z) < 0.001f && glm::abs(link.max_limit.z) < 0.001f) {
-                    
-                    // Decompose to Euler angles (XYZ)
-                    // Since we want to restrict to X-axis, we can try to extract the X rotation.
-                    // A robust way is to convert the current local_rotation to Euler, clamp X, and reset Y/Z to 0.
-                    // However, standard glm::eulerAngles is RGB (Pitch/Yaw/Roll) which depends on order.
-                    // MMD uses ZXY order for Euler? Or XYZ?
-                    // Actually, for a 1-DOF joint, we can just project the rotation axis.
-                    
-                    // Let's assume the bone's local coordinate system is set up such that X is the hinge.
-                    // We want to keep only the rotation around X.
-                    // q = [sin(theta/2) * axis, cos(theta/2)]
-                    // We want axis = (1,0,0).
-                    // So q should be (sin(theta/2), 0, 0, cos(theta/2)).
-                    
-                    // Extract X component of rotation
-                    // This is an approximation.
+                    // 提取当前绕 X 轴的旋转角度
                     float angle = 2.0f * std::atan2(linkBone.local_rotation.x, linkBone.local_rotation.w);
                     
-                    // Clamp angle
-                    // min_limit and max_limit are in radians
+                    // 限制角度
                     angle = glm::clamp(angle, link.min_limit.x, link.max_limit.x);
-                    
-                    // Reconstruct quaternion
+
+                    // 计算旋转
                     linkBone.local_rotation = glm::angleAxis(angle, glm::vec3(1.0f, 0.0f, 0.0f));
                 }
             }
             
-            // Update chain
+            // 更新链
             update_global_transform(bones, link.bone_index);
             for (int k = i - 1; k >= 0; --k) {
                  update_global_transform(bones, ikBone.ik_links[k].bone_index);
@@ -423,12 +393,13 @@ void solve_ik(std::vector<PMXBone>& bones, int ikBoneIndex) {
 }
 
 void TriMesh::update_bone_matrices() {
-    // 1. Reset / FK Pass
+    // 重置 FK
+    // 根据父子关系计算所有骨骼的全局变换
     for (int i = 0; i < bones.size(); ++i) {
         update_global_transform(bones, i);
     }
     
-    // 2. IK Pass
+    // IK
     for (int i = 0; i < bones.size(); ++i) {
         if (bones[i].ik_target_index != -1) {
             solve_ik(bones, i);
@@ -462,15 +433,15 @@ void TriMesh::load_opengl_textures(const std::string& modelBasePath) {
         std::string reason = "Unknown error";
 
         // 避免编码问题，用 UTF-8 读取路径
-        // modelBasePath is likely ANSI (from GetOpenFileNameA or argv)
+        // modelBasePath 可能是 ANSI
         std::wstring wBasePath = to_wstring(modelBasePath, CP_ACP);
-        // texInfo.path is UTF-8 (from PMX loader)
+        // texInfo.path 是 UTF-8
         std::wstring wTexPath = to_wstring(texInfo.path, CP_UTF8);
         
         std::wstring wFullPath = wBasePath + wTexPath;
-        // Normalize separators
         for (wchar_t& c : wFullPath) if (c == L'\\') c = L'/';
 
+        // 用 stb_image 读取纹理
         FILE* f = _wfopen(wFullPath.c_str(), L"rb");
         if (f) {
             data = stbi_load_from_file(f, &width, &height, &nrChannels, 0);

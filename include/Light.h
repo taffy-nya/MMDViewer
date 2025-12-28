@@ -2,18 +2,19 @@
 #include "glm/glm.hpp"
 
 enum LightType {
-    LIGHT_DIRECTIONAL = 0,
-    LIGHT_POINT = 1
+    LIGHT_DIRECTIONAL = 0, // 平行光
+    LIGHT_POINT = 1        // 点光源
 };
 
 struct Light {
-    glm::vec3 position;  // For point lights
-    glm::vec3 direction; // For directional lights
-    glm::vec3 color;
-    float intensity;
-    int type; // 0 = Directional, 1 = Point
+    glm::vec3 position;  // 光源位置 (仅用于点光源)
+    glm::vec3 direction; // 光照方向 (仅用于平行光)
+    glm::vec3 color;     // 颜色
+    float intensity;     // 强度
+    int type;            // 类型: 0 = 平行光, 1 = 点光源
     
-    // Attenuation for point lights
+    // 点光源的衰减
+    // (1.0 / (constant + linear * dist + quadratic * dist ^ 2)
     float constant;
     float linear;
     float quadratic;

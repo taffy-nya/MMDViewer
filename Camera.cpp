@@ -24,20 +24,25 @@ Camera::Camera()
 
 Camera::~Camera() {}
 
+// 计算视图矩阵
 glm::mat4 Camera::get_view_matrix() {
     return glm::lookAt(position, position + front, up);
 }
 
+// 计算投影矩阵（透视投影）
 glm::mat4 Camera::get_projection_matrix() {
     return glm::perspective(glm::radians(fov), aspect, z_near, z_far);
 }
 
+// 根据球坐标更新
 void Camera::update_camera_vectors() {
     glm::vec3 newFront;
+    // 将球坐标转换为笛卡尔坐标
     newFront.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     newFront.y = sin(glm::radians(pitch));
     newFront.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     front = glm::normalize(newFront);
+
     right = glm::normalize(glm::cross(front, world_up));
     up = glm::normalize(glm::cross(right, front));
 }
@@ -56,7 +61,7 @@ void Camera::handle_keys(int key, int action) {
 }
 
 void Camera::handle_scroll(double yoffset) {
-    // Zooming by moving camera forward/backward
+    // 通过沿前向量移动相机来实现缩放效果
     position += (float)yoffset * front * 1.0f; 
 }
 
@@ -70,32 +75,29 @@ void Camera::reset() {
     update_camera_vectors();
 }
 
-// Note: Mouse drag for model rotation is handled outside or we can add it here if we want Camera to manage "Orbit" style
-// For now, we keep the WASD free-cam style from the original code's key_callback
-
+// 围绕目标点旋转相机
 void Camera::orbit(float deltaX, float deltaY) {
-    // Current vector from target to camera
+    // 计算从目标点到相机的向量
     glm::vec3 offset = position - target;
     
-    // Rotate around World Up (Yaw)
-    // We rotate the offset, and also the camera's Up and Right vectors to maintain orientation
+    // 绕 y 轴旋转
     glm::mat4 yawRot = glm::rotate(glm::mat4(1.0f), glm::radians(-deltaX), glm::vec3(0.0f, 1.0f, 0.0f));
     offset = glm::vec3(yawRot * glm::vec4(offset, 1.0f));
     up = glm::vec3(yawRot * glm::vec4(up, 0.0f));
     right = glm::vec3(yawRot * glm::vec4(right, 0.0f));
 
-    // Rotate around Camera Right (Pitch)
-    // This allows going over the top (up vector will flip naturally)
+    // 绕右向量旋转
+    // 这样写 up 在越过头顶时也不会翻转
     glm::mat4 pitchRot = glm::rotate(glm::mat4(1.0f), glm::radians(-deltaY), right);
     offset = glm::vec3(pitchRot * glm::vec4(offset, 1.0f));
     up = glm::vec3(pitchRot * glm::vec4(up, 0.0f));
     
     position = target + offset;
     
-    // Update Front to look at target
+    // 更新前向量以指向目标
     front = glm::normalize(target - position);
     
-    // Re-orthogonalize to prevent drift
+    // 重新正交化以防止漂移
     right = glm::normalize(glm::cross(front, up));
     up = glm::normalize(glm::cross(right, front));
 }
