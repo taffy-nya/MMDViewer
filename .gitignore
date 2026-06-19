@@ -4,3 +4,6 @@ models/
 motions/
 stages/
 doc/
+.vscode/
+
+imgui.ini

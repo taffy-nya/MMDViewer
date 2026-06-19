@@ -1,0 +1,8 @@
+file(GLOB files "${SHADER_DIR}/*.glsl")
+set(entries "")
+foreach(f ${files})
+    get_filename_component(key "${f}" NAME_WE)
+    file(READ "${f}" content)
+    string(APPEND entries "    {\"${key}\", R\"glsl(\n${content})glsl\"},\n")
+endforeach()
+configure_file("${TEMPLATE}" "${OUTPUT}" @ONLY)
