@@ -1,6 +1,4 @@
 #include "render/stage.h"
-#include "render/model_renderer.h"
-#include "core/model_loader.h"
 #include "core/camera.h"
 #include "core/light.h"
 #include <print>
@@ -112,51 +110,20 @@ Stage::~Stage() {
 }
 
 auto Stage::load_pmx(const std::string& path) -> std::expected<void, std::string> {
-    use_default_grid();
-
-    auto model_result = core::load_pmx(path);
-    if (!model_result) return std::unexpected(model_result.error());
-    stage_model_ = std::move(*model_result);
-
-    auto last_slash = path.rfind('/');
-    if (last_slash == std::string::npos) last_slash = path.rfind('\\');
-    auto base_path = (last_slash != std::string::npos) ? path.substr(0, last_slash + 1) : "";
-
-    TextureCache tex_cache;
-    stage_textures_.clear();
-    for (const auto& tex_path : stage_model_.tex_paths) {
-        TextureInfo info;
-        info.path = tex_path;
-        if (!tex_path.empty()) {
-            std::string full_path = base_path + tex_path;
-            for (char& c : full_path) if (c == '\\') c = '/';
-            auto tex_result = tex_cache.get_or_load(full_path);
-            if (tex_result) info.gl_texture_id = (*tex_result)->id();
-        }
-        stage_textures_.push_back(info);
-    }
-
-    stage_skeleton_.init(stage_model_.bone_defs);
-    stage_skeleton_.update_transforms(stage_model_.bone_defs);
-
-    auto renderer = ModelRenderer::create(stage_model_, stage_textures_);
-    if (!renderer) return std::unexpected(renderer.error());
-    stage_renderer_ = std::make_unique<ModelRenderer>(std::move(*renderer));
+    auto result = Model::load(path);
+    if (!result) return std::unexpected(result.error());
+    stage_model_ = std::move(*result);
+    stage_model_->skeleton().update_transforms(stage_model_->data().bone_defs);
     return {};
 }
 
 void Stage::use_default_grid() {
-    stage_renderer_.reset();
-    stage_textures_.clear();
-    stage_model_ = Model{};
-    stage_skeleton_ = Skeleton{};
+    stage_model_.reset();
 }
 
 void Stage::draw_shadow(const glm::mat4& light_space) {
-    if (stage_renderer_) {
-        glm::mat4 ident(1.0f);
-        auto bone_mats = stage_skeleton_.get_bone_matrices();
-        stage_renderer_->draw_shadow(ident, bone_mats, light_space);
+    if (stage_model_) {
+        stage_model_->draw_shadow(light_space);
         return;
     }
 
@@ -175,15 +142,12 @@ void Stage::draw(const Camera& camera,
                  const std::vector<Light>& lights,
                  const glm::vec3& ambient, float ambient_strength,
                  GLuint shadow_map, const glm::mat4& light_space) {
-    if (stage_renderer_) {
-        glm::mat4 ident(1.0f);
-        auto bone_mats = stage_skeleton_.get_bone_matrices();
-        stage_renderer_->draw(camera, ident, bone_mats, lights, ambient, ambient_strength,
-                              shadow_map, light_space);
+    if (stage_model_) {
+        stage_model_->draw(camera, lights, ambient, ambient_strength,
+                           shadow_map, light_space);
         return;
     }
 
-    // 默认网格
     glm::mat4 model(1.0f);
     glm::mat4 view = camera.get_view_matrix();
     glm::mat4 proj = camera.get_projection_matrix();

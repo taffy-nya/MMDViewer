@@ -1,6 +1,7 @@
 #pragma once
 #include <glad/glad.h>
 #include <expected>
+#include <span>
 #include <string>
 #include <vector>
 #include <glm/glm.hpp>
@@ -9,14 +10,14 @@
 
 class Camera;
 struct Light;
-struct Model;
+struct ModelData;
 struct TextureInfo;
 
 namespace render {
 
 class ModelRenderer {
 public:
-    static auto create(const Model& model, const std::vector<TextureInfo>& textures)
+    static auto create(const ModelData& data)
         -> std::expected<ModelRenderer, std::string>;
 
     ModelRenderer() = default;
@@ -26,7 +27,9 @@ public:
     ModelRenderer(const ModelRenderer&) = delete;
     ModelRenderer& operator=(const ModelRenderer&) = delete;
 
-    void draw(const Camera& camera,
+    void draw(const ModelData& data,
+              const std::vector<TextureInfo>& textures,
+              const Camera& camera,
               const glm::mat4& model_matrix,
               const std::vector<glm::mat4>& bone_mats,
               const std::vector<Light>& lights,
@@ -34,19 +37,12 @@ public:
               GLuint shadow_map, const glm::mat4& light_space,
               float brightness = 1.0f);
 
-    void draw_shadow(const glm::mat4& model_matrix,
+    void draw_shadow(const ModelData& data,
+                     const glm::mat4& model_matrix,
                      const std::vector<glm::mat4>& bone_mats,
                      const glm::mat4& light_space);
 
-    void rebind(const Model& model, const std::vector<TextureInfo>& textures) {
-        model_ = &model;
-        textures_ = &textures;
-    }
-
 private:
-    const Model* model_ = nullptr;
-    const std::vector<TextureInfo>* textures_ = nullptr;
-
     Shader main_shader_;
     Shader edge_shader_;
     Shader shadow_shader_;
@@ -60,7 +56,7 @@ private:
     void cache_main_uniforms();
     void cache_edge_uniforms();
     void cache_shadow_uniforms();
-    void set_lights_uniforms(const LightLocs* locs, const std::vector<Light>& lights, int count);
+    void set_lights_uniforms(std::span<const LightLocs> locs, const std::vector<Light>& lights);
 
     GLuint default_toon_tex_ = 0;
 };

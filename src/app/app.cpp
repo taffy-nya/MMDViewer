@@ -6,12 +6,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <print>
-#include <ranges>
 
-#include "core/model_loader.h"
-#include "core/anim_loader.h"
-#include "animation/ik_solver.h"
-#include "render/model_renderer.h"
 #include "render/gizmo_renderer.h"
 #include "render/skeleton_renderer.h"
 #include "render/stage.h"
@@ -22,26 +17,14 @@
 #include "ImGuizmo.h"
 
 
-// ── 面板函数声明 ──
 void render_general_panel(App& app);
 void render_model_panel(App& app, GLFWwindow* win);
 void render_skeleton_panel(App& app);
 void render_stage_panel(App& app, GLFWwindow* win);
 void render_lighting_panel(App& app);
 
-// ── App 实现 ──
 
 App::~App() = default;
-
-auto App::model_matrix() const -> glm::mat4 {
-    glm::mat4 m(1.0f);
-    m = glm::translate(m, model_trans_);
-    m = glm::rotate(m, glm::radians(model_rot_.x), glm::vec3(1, 0, 0));
-    m = glm::rotate(m, glm::radians(model_rot_.y), glm::vec3(0, 1, 0));
-    m = glm::rotate(m, glm::radians(model_rot_.z), glm::vec3(0, 0, 1));
-    m = glm::scale(m, model_scale_);
-    return m;
-}
 
 auto App::create() -> std::expected<App, std::string> {
     auto win = Window::create({.width = 1920, .height = 1080, .title = "MMDViewer", .vsync = true});
@@ -100,12 +83,11 @@ auto App::init() -> std::expected<void, std::string> {
     if (!load_result) {
         std::println(stderr, "model load error: {}", load_result.error());
     }
-    auto result = load_motion(motion_path);
-    if (!result) {
-        std::println(stderr, "motion load error: {}", result.error());
+    auto motion_result = load_motion(motion_path);
+    if (!motion_result) {
+        std::println(stderr, "motion load error: {}", motion_result.error());
     }
 
-    // ImGui
     auto ui_result = ui::UiRenderer::init(handle, "c:\\Windows\\Fonts\\msyh.ttc");
     if (!ui_result) {
         return std::unexpected(ui_result.error());
@@ -134,51 +116,15 @@ auto App::init() -> std::expected<void, std::string> {
 }
 
 auto App::load_model(const std::string& path) -> std::expected<void, std::string> {
-    model_renderer_.reset();
-    textures_.clear();
-    model_ = Model{};
-    skeleton_ = Skeleton{};
-
-    auto model_result = core::load_pmx(path);
-    if (!model_result) return std::unexpected(model_result.error());
-    model_ = std::move(*model_result);
-    skeleton_.init(model_.bone_defs);
-
-    auto last_slash = path.rfind('/');
-    if (last_slash == std::string::npos) last_slash = path.rfind('\\');
-    auto base_path = (last_slash != std::string::npos) ? path.substr(0, last_slash + 1) : "";
-
-    textures_.reserve(model_.tex_paths.size());
-    for (const auto& tex_path : model_.tex_paths) {
-        TextureInfo info;
-        info.path = tex_path;
-        if (!tex_path.empty()) {
-            std::string full_path = base_path + tex_path;
-            for (char& c : full_path) if (c == '\\') c = '/';
-            auto tex_result = tex_cache_.get_or_load(full_path);
-            if (tex_result) info.gl_texture_id = (*tex_result)->id();
-        }
-        textures_.push_back(info);
-    }
-
-    auto mr_result = render::ModelRenderer::create(model_, textures_);
-    if (!mr_result) return std::unexpected(mr_result.error());
-    model_renderer_ = std::make_unique<render::ModelRenderer>(std::move(*mr_result));
+    auto result = Model::load(path);
+    if (!result) return std::unexpected(result.error());
+    model_ = std::move(*result);
     return {};
 }
 
 auto App::load_motion(const std::string& path) -> std::expected<void, std::string> {
-    auto anim_result = core::load_vmd(path);
-    if (!anim_result) return std::unexpected(anim_result.error());
-
-    if (model_.bone_defs.empty()) return std::unexpected("No model loaded");
-
-    auto result = anim_player_.set_anim(*anim_result, model_.bone_defs);
-    if (!result) return std::unexpected(result.error());
-
-    // std::println("Loaded VMD: {} ({} frames)", path, anim_player_.duration());
-    current_frame_ = 0;
-    return {};
+    if (!model_) return std::unexpected("No model loaded");
+    return model_->load_motion(path);
 }
 
 auto App::load_stage_pmx(const std::string& path) -> std::expected<void, std::string> {
@@ -190,34 +136,48 @@ void App::reset_stage() {
 }
 
 void App::reset() {
-    model_trans_ = glm::vec3(0);
-    model_rot_ = glm::vec3(0);
-    model_scale_ = glm::vec3(1);
+    if (model_) model_->reset_transform();
     camera.reset();
 }
 
-void App::update_anim(float dt) {
-    if (enable_motion && !manual_bone_control) {
-        if (is_playing) {
-            current_frame_ += dt * 30.0f;
-            if (current_frame_ >= anim_player_.duration()) {
-                current_frame_ = 0;
-            }
-            anim_player_.update(current_frame_, model_.bone_defs, skeleton_);
-        }
-    } else if (!enable_motion && !manual_bone_control) {
-        skeleton_.reset_pose();
-    }
-}
+void App::run() {
+    glfwSetWindowUserPointer(window_->get_handle(), this);
 
-void App::update_bones() {
-    auto& defs = model_.bone_defs;
-    auto& sk   = skeleton_;
-    for (int pass = 0; pass < 2; ++pass) {
-        sk.update_transforms(defs);
-        for (auto&& [idx, def] : std::views::enumerate(defs)) {
-            if (def.ik_target_index != -1) {
-                IKSolver::solve(static_cast<int>(idx), defs, sk);
+    timer::TimerResolution timer_res;
+
+    while (!window_->should_close()) {
+        float cur_time = static_cast<float>(window_->get_time());
+        float dt = cur_time - last_frame_time_;
+        last_frame_time_ = cur_time;
+
+        if (model_) {
+            model_->enable_motion = enable_motion;
+            model_->is_playing = is_playing;
+            model_->manual_bone_control = manual_bone_control;
+            model_->update_anim(dt);
+            model_->update_bones();
+        }
+
+        ui_->begin_frame();
+        render_ui();
+        render_gizmos();
+        ui_->end_frame();
+
+        auto light_space = compute_light_space();
+
+        render_shadow_pass(light_space);
+        render_main_pass(light_space);
+
+        ui_->draw_frame();
+
+        window_->swap_buffers();
+        window_->poll_events();
+
+        if (limit_fps && target_fps > 0) {
+            float frame_time = static_cast<float>(window_->get_time()) - last_frame_time_;
+            float target = 1.0f / static_cast<float>(target_fps);
+            if (frame_time < target) {
+                timer::sleep_for(target - frame_time);
             }
         }
     }
@@ -251,11 +211,7 @@ void App::render_shadow_pass(const glm::mat4& light_space) {
 
     if (show_stage && stage_) stage_->draw_shadow(light_space);
 
-    auto bone_mats = model_.bone_defs.empty() ? std::vector<glm::mat4>{} : skeleton_.get_bone_matrices();
-
-    if (model_renderer_) {
-        model_renderer_->draw_shadow(model_matrix(), bone_mats, light_space);
-    }
+    if (model_) model_->draw_shadow(light_space);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -271,23 +227,21 @@ void App::render_main_pass(const glm::mat4& light_space) {
         stage_->draw(camera, lights, ambient_color, ambient_strength, shadow_map_.texture(), light_space);
     }
 
-    if (model_renderer_) {
-        auto bone_mats = skeleton_.get_bone_matrices();
-        model_renderer_->draw(camera, model_matrix(), bone_mats, lights,
-                              ambient_color, ambient_strength, shadow_map_.texture(), light_space);
+    if (model_) {
+        model_->draw(camera, lights, ambient_color, ambient_strength, shadow_map_.texture(), light_space);
     }
 
     if (show_light_gizmos && gizmo_renderer_) {
         gizmo_renderer_->draw_lights(camera, lights);
     }
 
-    if (show_skeleton && skeleton_renderer_ && !model_.bone_defs.empty()) {
-        const auto& states = skeleton_.states();
+    if (show_skeleton && skeleton_renderer_ && model_ && !model_->data().bone_defs.empty()) {
+        const auto& states = model_->skeleton().states();
         std::vector<glm::mat4> globals;
         globals.reserve(states.size());
         for (const auto& st : states) globals.push_back(st.global_transform);
-        skeleton_renderer_->draw(camera, model_matrix(),
-                                 model_.bone_defs, globals, selected_bone_index);
+        skeleton_renderer_->draw(camera, model_->model_matrix(),
+                                 model_->data().bone_defs, globals, selected_bone_index);
     }
 }
 
@@ -334,16 +288,16 @@ void App::render_gizmos() {
     glm::mat4 view = camera.get_view_matrix();
     glm::mat4 proj = camera.get_projection_matrix();
 
-    // 骨骼控制
-    if (manual_bone_control && !model_.bone_defs.empty() && selected_bone_index >= 0) {
+    if (model_ && manual_bone_control && !model_->data().bone_defs.empty()
+        && selected_bone_index >= 0) {
         selected_light_index = -1;
 
-        auto& defs = model_.bone_defs;
-        auto& states = skeleton_.states();
+        auto& defs = model_->data().bone_defs;
+        auto& states = model_->skeleton().states();
         if (selected_bone_index < std::ssize(states)) {
             auto& st = states[selected_bone_index];
             const auto& def = defs[selected_bone_index];
-            glm::mat4 mm = model_matrix();
+            glm::mat4 mm = model_->model_matrix();
             glm::mat4 global = mm * st.global_transform;
 
             if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj),
@@ -368,7 +322,6 @@ void App::render_gizmos() {
         }
     }
 
-    // 灯光控制
     if (show_light_gizmos && selected_light_index >= 0 && selected_light_index < std::ssize(lights)) {
         auto& light = lights[selected_light_index];
         glm::mat4 transform(1);
@@ -409,48 +362,6 @@ void App::render_gizmos() {
     }
 }
 
-void App::run() {
-    glfwSetWindowUserPointer(window_->get_handle(), this);
-    if (model_renderer_) {
-        model_renderer_->rebind(model_, textures_);
-    }
-
-    timer::TimerResolution timer_res;
-
-    while (!window_->should_close()) {
-        float cur_time = static_cast<float>(window_->get_time());
-        float dt = cur_time - last_frame_time_;
-        last_frame_time_ = cur_time;
-
-        update_anim(dt);
-        update_bones();
-
-        ui_->begin_frame();
-        render_ui();
-        render_gizmos();
-        ui_->end_frame();
-
-        auto light_space = compute_light_space();
-
-        render_shadow_pass(light_space);
-        render_main_pass(light_space);
-
-        ui_->draw_frame();
-
-        window_->swap_buffers();
-        window_->poll_events();
-
-        if (limit_fps && target_fps > 0) {
-            float frame_time = static_cast<float>(window_->get_time()) - last_frame_time_;
-            float target = 1.0f / static_cast<float>(target_fps);
-            if (frame_time < target) {
-                timer::sleep_for(target - frame_time);
-            }
-        }
-    }
-}
-
-// ── GLFW callbacks ──
 
 auto App::self(GLFWwindow* w) -> App& {
     return *static_cast<App*>(glfwGetWindowUserPointer(w));

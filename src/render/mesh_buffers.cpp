@@ -3,8 +3,8 @@
 
 namespace render {
 
-auto MeshBuffers::create(const Model& model) -> std::expected<MeshBuffers, std::string> {
-    const auto& verts = model.vertices;
+auto MeshBuffers::create(const ModelData& data) -> std::expected<MeshBuffers, std::string> {
+    const auto& verts = data.vertices;
     if (verts.empty()) {
         return std::unexpected(std::string("model has no vertices"));
     }
@@ -21,8 +21,8 @@ auto MeshBuffers::create(const Model& model) -> std::expected<MeshBuffers, std::
     glGenBuffers(1, &mb.ebo_);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mb.ebo_);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 model.faces.size() * sizeof(Face),
-                 model.faces.data(),
+                 data.faces.size() * sizeof(Face),
+                 data.faces.data(),
                  GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
@@ -45,7 +45,7 @@ auto MeshBuffers::create(const Model& model) -> std::expected<MeshBuffers, std::
     glBindBuffer(GL_TEXTURE_BUFFER, mb.bone_tbo_);
     glGenTextures(1, &mb.bone_tex_);
 
-    mb.index_count_ = static_cast<int>(model.faces.size() * sizeof(Face) / sizeof(unsigned int));
+    mb.index_count_ = static_cast<int>(data.faces.size() * sizeof(Face) / sizeof(unsigned int));
 
     glBindVertexArray(0);
     return mb;

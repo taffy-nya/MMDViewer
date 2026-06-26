@@ -14,16 +14,21 @@ void render_skeleton_panel(App& app) {
 
     ImGui::Separator();
 
-    if (!app.model().bone_defs.empty()) {
+    if (!app.has_model()) {
+        ImGui::Text("No model loaded");
+        return;
+    }
+    auto& model = app.model();
+    auto& defs = model.data().bone_defs;
+    if (!defs.empty()) {
         if (ImGui::Button("Reset All Bones")) {
-            app.skeleton().reset_pose();
+            model.reset_pose();
             app.selected_bone_index = -1;
         }
     }
 
-    auto& defs = app.model().bone_defs;
     if (!defs.empty()) {
-        auto& states = app.skeleton().states();
+        auto& states = model.skeleton().states();
 
         ImGui::BeginChild("BoneList", ImVec2(150, 0), true);
         for (auto&& [idx, def] : std::views::enumerate(defs)) {

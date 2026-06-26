@@ -18,8 +18,8 @@ static auto ansi_to_utf8(const std::string& ansi) -> std::string {
     return std::string(u8_buf.data());
 }
 
-auto file_dialog::open(const char* filter_name, const char* filter_spec, GLFWwindow* /*parent*/) -> std::expected<std::string, std::string> {
-    std::string filter = std::string(filter_name) + '\0' + filter_spec + '\0';
+auto file_dialog::open(std::string_view filter_name, std::string_view filter_spec, GLFWwindow* /*parent*/) -> std::expected<std::string, std::string> {
+    std::string filter = std::string(filter_name) + '\0' + std::string(filter_spec) + '\0';
     std::string all = std::string("All Files") + '\0' + "*.*" + '\0';
     filter += all + '\0';
 

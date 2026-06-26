@@ -1,11 +1,12 @@
 #pragma once
 #include <expected>
 #include <string>
+#include <string_view>
 
 struct GLFWwindow;
 
 namespace file_dialog {
 
-auto open(const char* filter_name, const char* filter_spec, GLFWwindow* parent) -> std::expected<std::string, std::string>;
+auto open(std::string_view filter_name, std::string_view filter_spec, GLFWwindow* parent) -> std::expected<std::string, std::string>;
 
 } // namespace file_dialog

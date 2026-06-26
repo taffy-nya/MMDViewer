@@ -5,7 +5,7 @@
 #include <vector>
 
 struct Scene {
-    Model model;
+    ModelData model;
     Animation anim;
     std::vector<Light> lights;
 };

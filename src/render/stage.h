@@ -4,18 +4,15 @@
 #include <expected>
 #include <string>
 #include <memory>
+#include <optional>
 #include <vector>
-#include "core/model.h"
-#include "core/texture.h"
-#include "animation/skeleton.h"
 #include "render/shader.h"
+#include "scene/model.h"
 
 class Camera;
 struct Light;
 
 namespace render {
-
-class ModelRenderer;
 
 class Stage {
 public:
@@ -35,7 +32,8 @@ public:
 private:
     float size_ = 50.0f;
 
-    // 地面平面
+    std::optional<Model> stage_model_;
+
     Shader plane_shader_;
     GLuint plane_vao_ = 0, plane_vbo_ = 0;
     GLint plane_loc_model_, plane_loc_view_, plane_loc_proj_;
@@ -48,21 +46,13 @@ private:
         GLint constant, linear, quadratic, enabled;
     } plane_light_locs_[16];
 
-    // 网格线
     Shader line_shader_;
     GLuint line_vao_ = 0, line_vbo_ = 0;
     GLint line_loc_model_, line_loc_view_, line_loc_proj_, line_loc_color_;
     int line_vertex_count_ = 0;
 
-    // 阴影（默认地面）
     Shader shadow_shader_;
     GLint shadow_loc_model_, shadow_loc_light_space_;
-
-    // PMX 舞台
-    Model stage_model_;
-    std::vector<TextureInfo> stage_textures_;
-    Skeleton stage_skeleton_;
-    std::unique_ptr<ModelRenderer> stage_renderer_;
 };
 
 } // namespace render

@@ -10,7 +10,7 @@ namespace render {
 
 class MeshBuffers {
 public:
-    static auto create(const Model& model) -> std::expected<MeshBuffers, std::string>;
+    static auto create(const ModelData& data) -> std::expected<MeshBuffers, std::string>;
 
     MeshBuffers() = default;
     ~MeshBuffers();

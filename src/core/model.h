@@ -58,14 +58,10 @@ struct Material {
     bool has_texture() const { return tex_idx != -1; }
 };
 
-struct Model {
+struct ModelData {
     std::vector<Vertex> vertices;
     std::vector<Face> faces;
     std::vector<Material> materials;
     std::vector<BoneDef> bone_defs;
     std::vector<std::string> tex_paths;
-
-    glm::vec3 translation{0};
-    glm::vec3 rotation{0};
-    glm::vec3 scale{1};
 };

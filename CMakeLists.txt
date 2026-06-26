@@ -77,6 +77,7 @@ file(GLOB PLATFORM_SOURCES CONFIGURE_DEPENDS "src/platform/*.cpp")
 file(GLOB CORE_SOURCES CONFIGURE_DEPENDS "src/core/*.cpp")
 file(GLOB RENDER_SOURCES CONFIGURE_DEPENDS "src/render/*.cpp")
 file(GLOB ANIM_SOURCES CONFIGURE_DEPENDS "src/animation/*.cpp")
+file(GLOB SCENE_SOURCES CONFIGURE_DEPENDS "src/scene/*.cpp")
 file(GLOB APP_SOURCES CONFIGURE_DEPENDS "src/app/*.cpp")
 file(GLOB UI_SOURCES CONFIGURE_DEPENDS "src/ui/*.cpp" "src/ui/panels/*.cpp")
 file(GLOB MAIN_SOURCE CONFIGURE_DEPENDS "src/main.cpp")
@@ -133,6 +134,7 @@ add_executable(MMDViewer
     ${CORE_SOURCES}
     ${RENDER_SOURCES}
     ${ANIM_SOURCES}
+    ${SCENE_SOURCES}
     ${APP_SOURCES}
     ${UI_SOURCES}
 )

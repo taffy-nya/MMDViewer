@@ -83,7 +83,7 @@ auto Shader::load(std::string_view vert_key, std::string_view frag_key) -> std::
     return Shader(program);
 }
 
-auto Shader::from_paths(const char* vert_path, const char* frag_path) -> std::expected<Shader, std::string> {
+auto Shader::from_paths(std::string_view vert_path, std::string_view frag_path) -> std::expected<Shader, std::string> {
     return load(key_from_path(vert_path), key_from_path(frag_path));
 }
 
@@ -105,31 +105,32 @@ Shader& Shader::operator=(Shader&& other) noexcept {
     return *this;
 }
 
-auto Shader::uniform(const char* name) const -> GLint {
-    auto it = cache_.find(name);
+auto Shader::uniform(std::string_view name) const -> GLint {
+    std::string key(name);
+    auto it = cache_.find(key);
     if (it != cache_.end()) return it->second;
-    GLint loc = glGetUniformLocation(program_, name);
-    cache_[name] = loc;
+    GLint loc = glGetUniformLocation(program_, key.c_str());
+    cache_.emplace(std::move(key), loc);
     return loc;
 }
 
-void Shader::set_mat4(const char* name, const glm::mat4& m) const {
+void Shader::set_mat4(std::string_view name, const glm::mat4& m) const {
     glUniformMatrix4fv(uniform(name), 1, GL_FALSE, glm::value_ptr(m));
 }
 
-void Shader::set_vec3(const char* name, const glm::vec3& v) const {
+void Shader::set_vec3(std::string_view name, const glm::vec3& v) const {
     glUniform3fv(uniform(name), 1, glm::value_ptr(v));
 }
 
-void Shader::set_vec4(const char* name, const glm::vec4& v) const {
+void Shader::set_vec4(std::string_view name, const glm::vec4& v) const {
     glUniform4fv(uniform(name), 1, glm::value_ptr(v));
 }
 
-void Shader::set_float(const char* name, float v) const {
+void Shader::set_float(std::string_view name, float v) const {
     glUniform1f(uniform(name), v);
 }
 
-void Shader::set_int(const char* name, int v) const {
+void Shader::set_int(std::string_view name, int v) const {
     glUniform1i(uniform(name), v);
 }
 

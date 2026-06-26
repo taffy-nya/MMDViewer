@@ -49,7 +49,7 @@ static void skip_pmx_str(std::ifstream& file) {
     if (file && length > 0) file.seekg(length, std::ios_base::cur);
 }
 
-auto load_pmx(const std::filesystem::path& path) -> std::expected<Model, std::string> {
+auto load_pmx(const std::filesystem::path& path) -> std::expected<ModelData, std::string> {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
         return std::unexpected(std::format("cannot open PMX: {}", path.string()));
@@ -83,12 +83,12 @@ auto load_pmx(const std::filesystem::path& path) -> std::expected<Model, std::st
     skip_pmx_str(file);
     skip_pmx_str(file);
 
-    Model model;
+    ModelData data;
 
     // Read vertices
     int num_vertices;
     read_data(file, num_vertices);
-    model.vertices.reserve(num_vertices);
+    data.vertices.reserve(num_vertices);
     for (int i = 0; i < num_vertices; ++i) {
         Vertex v;
         read_data(file, v.position);
@@ -148,33 +148,33 @@ auto load_pmx(const std::filesystem::path& path) -> std::expected<Model, std::st
                 break;
             }
         }
-        model.vertices.push_back(v);
+        data.vertices.push_back(v);
         file.seekg(4, std::ios::cur);   // skip edge scale
     }
 
     // Read faces
     int num_face_indices;
     read_data(file, num_face_indices);
-    model.faces.reserve(num_face_indices / 3);
+    data.faces.reserve(num_face_indices / 3);
     for (int i = 0; i < num_face_indices / 3; ++i) {
         auto v1 = static_cast<uint32_t>(read_index(file, vertex_index_size));
         auto v2 = static_cast<uint32_t>(read_index(file, vertex_index_size));
         auto v3 = static_cast<uint32_t>(read_index(file, vertex_index_size));
-        model.faces.emplace_back(v1, v3, v2); // swap v2/v3 for handedness
+        data.faces.emplace_back(v1, v3, v2); // swap v2/v3 for handedness
     }
 
     // Read textures
     int num_textures;
     read_data(file, num_textures);
-    model.tex_paths.reserve(num_textures);
+    data.tex_paths.reserve(num_textures);
     for (int i = 0; i < num_textures; ++i) {
-        model.tex_paths.push_back(read_pmx_str(file, text_encoding));
+        data.tex_paths.push_back(read_pmx_str(file, text_encoding));
     }
 
     // Read materials
     int num_materials;
     read_data(file, num_materials);
-    model.materials.reserve(num_materials);
+    data.materials.reserve(num_materials);
     for (int i = 0; i < num_materials; ++i) {
         Material mat;
         skip_pmx_str(file);
@@ -203,13 +203,13 @@ auto load_pmx(const std::filesystem::path& path) -> std::expected<Model, std::st
         }
         skip_pmx_str(file);
         read_data(file, mat.face_count);
-        model.materials.push_back(mat);
+        data.materials.push_back(mat);
     }
 
     // Read bones
     int num_bones;
     read_data(file, num_bones);
-    model.bone_defs.reserve(num_bones);
+    data.bone_defs.reserve(num_bones);
     for (int i = 0; i < num_bones; ++i) {
         BoneDef b;
         b.name = read_pmx_str(file, text_encoding);
@@ -256,10 +256,10 @@ auto load_pmx(const std::filesystem::path& path) -> std::expected<Model, std::st
                 }
             }
         }
-        model.bone_defs.push_back(b);
+        data.bone_defs.push_back(b);
     }
 
-    return model;
+    return data;
 }
 
 } // namespace core

@@ -3,6 +3,7 @@
 #include "core/model.h"
 #include "core/texture.h"
 #include "core/light.h"
+#include <iterator>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace render {
@@ -43,8 +44,8 @@ void ModelRenderer::cache_shadow_uniforms() {
     shadow_shader_.uniform("boneMatrices");
 }
 
-void ModelRenderer::set_lights_uniforms(const LightLocs* locs, const std::vector<Light>& lights, int count) {
-    for (int i = 0; i < count && i < 16; ++i) {
+void ModelRenderer::set_lights_uniforms(std::span<const LightLocs> locs, const std::vector<Light>& lights) {
+    for (int i = 0; i < std::ssize(lights) && i < std::ssize(locs); ++i) {
         const auto& light = lights[i];
         const auto& l = locs[i];
         glUniform3fv(l.position,  1, glm::value_ptr(light.position));
@@ -59,11 +60,11 @@ void ModelRenderer::set_lights_uniforms(const LightLocs* locs, const std::vector
     }
 }
 
-auto ModelRenderer::create(const Model& model, const std::vector<TextureInfo>& textures)
+auto ModelRenderer::create(const ModelData& data)
     -> std::expected<ModelRenderer, std::string> {
     ModelRenderer r;
 
-    auto buf_result = MeshBuffers::create(model);
+    auto buf_result = MeshBuffers::create(data);
     if (!buf_result) return std::unexpected(buf_result.error());
     r.buffers_ = std::move(*buf_result);
 
@@ -91,8 +92,6 @@ auto ModelRenderer::create(const Model& model, const std::vector<TextureInfo>& t
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    r.model_ = &model;
-    r.textures_ = &textures;
     return r;
 }
 
@@ -101,9 +100,7 @@ ModelRenderer::~ModelRenderer() {
 }
 
 ModelRenderer::ModelRenderer(ModelRenderer&& other) noexcept
-    : model_(other.model_)
-    , textures_(other.textures_)
-    , main_shader_(std::move(other.main_shader_))
+    : main_shader_(std::move(other.main_shader_))
     , edge_shader_(std::move(other.edge_shader_))
     , shadow_shader_(std::move(other.shadow_shader_))
     , buffers_(std::move(other.buffers_))
@@ -112,16 +109,12 @@ ModelRenderer::ModelRenderer(ModelRenderer&& other) noexcept
         light_locs_[i] = other.light_locs_[i];
         edge_light_locs_[i] = other.edge_light_locs_[i];
     }
-    other.model_ = nullptr;
-    other.textures_ = nullptr;
     other.default_toon_tex_ = 0;
 }
 
 ModelRenderer& ModelRenderer::operator=(ModelRenderer&& other) noexcept {
     if (this != &other) {
         if (default_toon_tex_ != 0) glDeleteTextures(1, &default_toon_tex_);
-        model_ = other.model_;
-        textures_ = other.textures_;
         main_shader_ = std::move(other.main_shader_);
         edge_shader_ = std::move(other.edge_shader_);
         shadow_shader_ = std::move(other.shadow_shader_);
@@ -131,22 +124,20 @@ ModelRenderer& ModelRenderer::operator=(ModelRenderer&& other) noexcept {
             light_locs_[i] = other.light_locs_[i];
             edge_light_locs_[i] = other.edge_light_locs_[i];
         }
-        other.model_ = nullptr;
-        other.textures_ = nullptr;
         other.default_toon_tex_ = 0;
     }
     return *this;
 }
 
-void ModelRenderer::draw(const Camera& camera,
+void ModelRenderer::draw(const ModelData& data,
+                         const std::vector<TextureInfo>& textures,
+                         const Camera& camera,
                          const glm::mat4& model_matrix,
                          const std::vector<glm::mat4>& bone_mats,
                          const std::vector<Light>& lights,
                          const glm::vec3& ambient, float ambient_strength,
                          GLuint shadow_map, const glm::mat4& light_space,
                          float brightness) {
-    if (!model_ || !textures_) return;
-
     glm::mat4 view = camera.get_view_matrix();
     glm::mat4 proj = camera.get_projection_matrix();
     glm::vec3 view_pos = camera.position;
@@ -156,7 +147,6 @@ void ModelRenderer::draw(const Camera& camera,
         buffers_.update_bone_matrices(bone_mats);
     }
 
-    // --- 描边 pass ---
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
     edge_shader_.use();
@@ -168,10 +158,10 @@ void ModelRenderer::draw(const Camera& camera,
     edge_shader_.set_vec3("ambientColor", ambient);
     edge_shader_.set_float("ambientStrength", ambient_strength);
     edge_shader_.set_int("numLights", static_cast<int>(lights.size()));
-    set_lights_uniforms(edge_light_locs_, lights, static_cast<int>(lights.size()));
+    set_lights_uniforms(edge_light_locs_, lights);
 
     unsigned int face_offset = 0;
-    for (const auto& mat : model_->materials) {
+    for (const auto& mat : data.materials) {
         edge_shader_.set_float("edge_size", mat.edge_size * 0.03f);
         edge_shader_.set_vec4("edge_color", mat.edge_color);
         glDrawElements(GL_TRIANGLES, mat.face_count, GL_UNSIGNED_INT,
@@ -179,7 +169,6 @@ void ModelRenderer::draw(const Camera& camera,
         face_offset += mat.face_count;
     }
 
-    // --- 主渲染 pass ---
     glCullFace(GL_BACK);
     main_shader_.use();
 
@@ -198,13 +187,13 @@ void ModelRenderer::draw(const Camera& camera,
     main_shader_.set_float("ambientStrength", ambient_strength);
     main_shader_.set_int("numLights", static_cast<int>(lights.size()));
     main_shader_.set_float("brightness", brightness);
-    set_lights_uniforms(light_locs_, lights, static_cast<int>(lights.size()));
+    set_lights_uniforms(light_locs_, lights);
 
     main_shader_.set_int("textureSampler", 0);
     main_shader_.set_int("toonSampler", 1);
 
     face_offset = 0;
-    for (const auto& mat : model_->materials) {
+    for (const auto& mat : data.materials) {
         main_shader_.set_vec4("objectColor", mat.diffuse);
         main_shader_.set_float("shininess", mat.shininess);
         main_shader_.set_vec3("specularColor", mat.specular);
@@ -212,7 +201,7 @@ void ModelRenderer::draw(const Camera& camera,
         if (mat.has_texture()) {
             main_shader_.set_int("hasTexture", 1);
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, (*textures_)[mat.tex_idx].gl_texture_id);
+            glBindTexture(GL_TEXTURE_2D, textures[mat.tex_idx].gl_texture_id);
         } else {
             main_shader_.set_int("hasTexture", 0);
         }
@@ -220,8 +209,8 @@ void ModelRenderer::draw(const Camera& camera,
         glActiveTexture(GL_TEXTURE1);
         if (mat.use_shared_toon) {
             glBindTexture(GL_TEXTURE_2D, default_toon_tex_);
-        } else if (mat.toon_tex_idx >= 0 && mat.toon_tex_idx < static_cast<int>(textures_->size())) {
-            glBindTexture(GL_TEXTURE_2D, (*textures_)[mat.toon_tex_idx].gl_texture_id);
+        } else if (mat.toon_tex_idx >= 0 && mat.toon_tex_idx < static_cast<int>(textures.size())) {
+            glBindTexture(GL_TEXTURE_2D, textures[mat.toon_tex_idx].gl_texture_id);
         } else {
             glBindTexture(GL_TEXTURE_2D, default_toon_tex_);
         }
@@ -242,11 +231,10 @@ void ModelRenderer::draw(const Camera& camera,
     glBindVertexArray(0);
 }
 
-void ModelRenderer::draw_shadow(const glm::mat4& model_matrix,
+void ModelRenderer::draw_shadow(const ModelData& data,
+                                const glm::mat4& model_matrix,
                                 const std::vector<glm::mat4>& bone_mats,
                                 const glm::mat4& light_space) {
-    if (!model_) return;
-
     shadow_shader_.use();
     shadow_shader_.set_mat4("model", model_matrix);
     shadow_shader_.set_mat4("lightSpaceMatrix", light_space);
@@ -257,7 +245,7 @@ void ModelRenderer::draw_shadow(const glm::mat4& model_matrix,
     buffers_.bind();
 
     unsigned int face_offset = 0;
-    for (const auto& mat : model_->materials) {
+    for (const auto& mat : data.materials) {
         if (mat.draw_flags & 0x01) {
             glDisable(GL_CULL_FACE);
         } else {

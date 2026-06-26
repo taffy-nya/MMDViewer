@@ -13,7 +13,7 @@ public:
     static auto load(std::string_view vert_key, std::string_view frag_key)
         -> std::expected<Shader, std::string>;
 
-    static auto from_paths(const char* vert_path, const char* frag_path)
+    static auto from_paths(std::string_view vert_path, std::string_view frag_path)
         -> std::expected<Shader, std::string>;
 
     Shader() = default;
@@ -27,13 +27,13 @@ public:
     GLuint id() const { return program_; }
     explicit operator bool() const { return program_ != 0; }
 
-    auto uniform(const char* name) const -> GLint;
+    auto uniform(std::string_view name) const -> GLint;
 
-    void set_mat4(const char* name, const glm::mat4& m) const;
-    void set_vec3(const char* name, const glm::vec3& v) const;
-    void set_vec4(const char* name, const glm::vec4& v) const;
-    void set_float(const char* name, float v) const;
-    void set_int(const char* name, int v) const;
+    void set_mat4(std::string_view name, const glm::mat4& m) const;
+    void set_vec3(std::string_view name, const glm::vec3& v) const;
+    void set_vec4(std::string_view name, const glm::vec4& v) const;
+    void set_float(std::string_view name, float v) const;
+    void set_int(std::string_view name, int v) const;
 
 private:
     explicit Shader(GLuint p) : program_(p) {}

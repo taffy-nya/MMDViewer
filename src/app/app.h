@@ -1,18 +1,16 @@
 #pragma once
 #include <expected>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include <glm/glm.hpp>
 
 #include "core/camera.h"
 #include "core/light.h"
-#include "core/model.h"
-#include "core/texture.h"
-#include "animation/skeleton.h"
-#include "animation/anim_player.h"
 #include "render/shadow_map.h"
-#include "imgui.h"
+#include "scene/model.h"
+#include "imgui.h"  // IWYU pragma: keep
 #include "ImGuizmo.h"
 
 struct GLFWwindow;
@@ -20,7 +18,6 @@ struct GLFWwindow;
 class Window;
 
 namespace render {
-class ModelRenderer;
 class GizmoRenderer;
 class SkeletonRenderer;
 class Stage;
@@ -45,21 +42,18 @@ public:
     void reset_stage();
     void reset();
 
-    // 模型数据访问（UI 面板用）
-    auto& model() { return model_; }
-    auto& skeleton() { return skeleton_; }
-    auto& textures() { return textures_; }
+    bool has_model() const { return model_.has_value(); }
+    Model& model() { return *model_; }
+    const Model& model() const { return *model_; }
 
-    // 模型变换
-    void set_translation(const glm::vec3& t) { model_trans_ = t; }
-    void set_rotation(const glm::vec3& r) { model_rot_ = r; }
-    void set_scale(const glm::vec3& s) { model_scale_ = s; }
-    auto translation() const -> glm::vec3 { return model_trans_; }
-    auto rotation() const -> glm::vec3 { return model_rot_; }
-    auto scale() const -> glm::vec3 { return model_scale_; }
-    auto model_matrix() const -> glm::mat4;
+    void set_translation(const glm::vec3& t) { if (model_) model_->translation = t; }
+    void set_rotation(const glm::vec3& r)    { if (model_) model_->rotation = r; }
+    void set_scale(const glm::vec3& s)       { if (model_) model_->scale = s; }
+    auto translation() const -> glm::vec3 { return model_ ? model_->translation : glm::vec3(0); }
+    auto rotation() const -> glm::vec3    { return model_ ? model_->rotation : glm::vec3(0); }
+    auto scale() const -> glm::vec3       { return model_ ? model_->scale : glm::vec3(1); }
+    auto model_matrix() const -> glm::mat4 { return model_ ? model_->model_matrix() : glm::mat4(1.0f); }
 
-    // ── 公开状态（UI 面板直接读写）──
     std::string model_path{"models/taffy/taffy.pmx"};
     std::string motion_path{"motions/TDA.vmd"};
     std::string stage_path{"Default Grid"};
@@ -91,30 +85,19 @@ private:
     std::unique_ptr<Window> window_;
     float last_frame_time_{0};
 
-    Model model_;
-    Skeleton skeleton_;
-    std::vector<TextureInfo> textures_;
-    TextureCache tex_cache_;
-    glm::vec3 model_trans_{0}, model_rot_{0}, model_scale_{1};
+    std::optional<Model> model_;
 
-    std::unique_ptr<render::ModelRenderer> model_renderer_;
     std::unique_ptr<render::GizmoRenderer> gizmo_renderer_;
     std::unique_ptr<render::SkeletonRenderer> skeleton_renderer_;
     std::unique_ptr<render::Stage> stage_;
     render::ShadowMap shadow_map_;
-    AnimPlayer anim_player_;
     std::unique_ptr<ui::UiRenderer> ui_;
-
-    float current_frame_{0};
 
     bool mouse_left_{}, mouse_right_{}, mouse_middle_{};
     double last_x_{}, last_y_{};
 
-    // ── 内部方法 ──
     auto init() -> std::expected<void, std::string>;
     auto compute_light_space() const -> glm::mat4;
-    void update_anim(float dt);
-    void update_bones();
     void render_shadow_pass(const glm::mat4& light_space);
     void render_main_pass(const glm::mat4& light_space);
     void render_ui();
