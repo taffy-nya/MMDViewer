@@ -4,6 +4,8 @@
 #include <format>
 #include <vector>
 #include <cstring>
+#include <algorithm>
+#include <cctype>
 
 namespace core {
 
@@ -49,6 +51,31 @@ static void skip_pmx_str(std::ifstream& file) {
     if (file && length > 0) file.seekg(length, std::ios_base::cur);
 }
 
+static void sanitize_material_flags(Material& mat) {
+    static const std::vector<std::string> eye_keywords = {
+        "eye", "eyewhite", "pupil", "sclera",
+        "瞳", "目", "白目", "眼球", "両目", "左目", "右目"
+    };
+    static const std::vector<std::string> mouth_keywords = {
+        "mouth", "tongue", "teeth", "tooth", "gum",
+        "口", "口腔", "舌", "齿", "歯", "牙"
+    };
+
+    std::string lower = mat.name;
+    std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
+
+    auto match = [&](const std::string& kw) {
+        return lower.find(kw) != std::string::npos;
+    };
+
+    for (const auto& kw : eye_keywords) {
+        if (match(kw)) { mat.draw_flags &= ~0x0C; return; }
+    }
+    for (const auto& kw : mouth_keywords) {
+        if (match(kw)) { mat.draw_flags &= ~0x0C; return; }
+    }
+}
+
 auto load_pmx(const std::filesystem::path& path) -> std::expected<ModelData, std::string> {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
@@ -72,9 +99,9 @@ auto load_pmx(const std::filesystem::path& path) -> std::expected<ModelData, std
     unsigned char uv_size = g_info[1];
     unsigned char vertex_index_size = g_info[2];
     unsigned char texture_index_size = g_info[3];
-    [[maybe_unused]] unsigned char material_index_size = g_info[4];
+    unsigned char material_index_size = g_info[4];
     unsigned char bone_index_size = g_info[5];
-    [[maybe_unused]] unsigned char morph_index_size = g_info[6];
+    unsigned char morph_index_size = g_info[6];
     [[maybe_unused]] unsigned char rigid_body_index_size = g_info[7];
 
     // Skip model names
@@ -177,7 +204,7 @@ auto load_pmx(const std::filesystem::path& path) -> std::expected<ModelData, std
     data.materials.reserve(num_materials);
     for (int i = 0; i < num_materials; ++i) {
         Material mat;
-        skip_pmx_str(file);
+        mat.name = read_pmx_str(file, text_encoding);
         skip_pmx_str(file);
         read_data(file, mat.diffuse);
         read_data(file, mat.specular);
@@ -203,6 +230,7 @@ auto load_pmx(const std::filesystem::path& path) -> std::expected<ModelData, std
         }
         skip_pmx_str(file);
         read_data(file, mat.face_count);
+        sanitize_material_flags(mat);
         data.materials.push_back(mat);
     }
 
@@ -257,6 +285,112 @@ auto load_pmx(const std::filesystem::path& path) -> std::expected<ModelData, std
             }
         }
         data.bone_defs.push_back(b);
+    }
+
+    // Read morphs
+    int num_morphs;
+    read_data(file, num_morphs);
+    data.morph_defs.reserve(num_morphs);
+    for (int i = 0; i < num_morphs; ++i) {
+        MorphDef m;
+        m.name = read_pmx_str(file, text_encoding);
+        m.name_en = read_pmx_str(file, text_encoding);
+        read_data(file, m.panel);
+        unsigned char morph_type_raw;
+        read_data(file, morph_type_raw);
+        m.type = static_cast<MorphType>(morph_type_raw);
+
+        int num_offsets;
+        read_data(file, num_offsets);
+
+        switch (m.type) {
+            case MorphType::Group: {
+                for (int j = 0; j < num_offsets; ++j) {
+                    GroupMorphOffset off;
+                    off.morph_index = read_index(file, morph_index_size);
+                    read_data(file, off.weight_ratio);
+                    m.group_offsets.push_back(off);
+                }
+                break;
+            }
+            case MorphType::Vertex: {
+                for (int j = 0; j < num_offsets; ++j) {
+                    VertexMorphOffset off;
+                    off.vertex_index = read_index(file, vertex_index_size);
+                    read_data(file, off.position_delta);
+                    off.position_delta.z = -off.position_delta.z;
+                    m.vertex_offsets.push_back(off);
+                }
+                break;
+            }
+            case MorphType::Bone: {
+                for (int j = 0; j < num_offsets; ++j) {
+                    BoneMorphOffset off;
+                    off.bone_index = read_index(file, bone_index_size);
+                    read_data(file, off.translation_delta);
+                    off.translation_delta.z = -off.translation_delta.z;
+                    float qx, qy, qz, qw;
+                    read_data(file, qx);
+                    read_data(file, qy);
+                    read_data(file, qz);
+                    read_data(file, qw);
+                    off.rotation_quat = glm::vec4(-qx, -qy, qz, qw);
+                    m.bone_offsets.push_back(off);
+                }
+                break;
+            }
+            case MorphType::UV:
+            case MorphType::AdditionalUV1:
+            case MorphType::AdditionalUV2:
+            case MorphType::AdditionalUV3:
+            case MorphType::AdditionalUV4: {
+                for (int j = 0; j < num_offsets; ++j) {
+                    UVMorphOffset off;
+                    off.vertex_index = read_index(file, vertex_index_size);
+                    read_data(file, off.uv_delta);
+                    m.uv_offsets.push_back(off);
+                }
+                break;
+            }
+            case MorphType::Material: {
+                for (int j = 0; j < num_offsets; ++j) {
+                    MaterialMorphOffset off;
+                    off.material_index = read_index(file, material_index_size);
+                    read_data(file, off.calc_mode);
+                    read_data(file, off.diffuse);
+                    read_data(file, off.specular);
+                    read_data(file, off.shininess);
+                    read_data(file, off.ambient);
+                    read_data(file, off.edge_color);
+                    read_data(file, off.edge_size);
+                    read_data(file, off.tex_coeff);
+                    read_data(file, off.sphere_coeff);
+                    read_data(file, off.toon_coeff);
+                    m.material_offsets.push_back(off);
+                }
+                break;
+            }
+            case MorphType::Flip: {
+                for (int j = 0; j < num_offsets; ++j) {
+                    GroupMorphOffset off;
+                    off.morph_index = read_index(file, morph_index_size);
+                    read_data(file, off.weight_ratio);
+                    m.group_offsets.push_back(off);
+                }
+                break;
+            }
+            case MorphType::Impulse: {
+                for (int j = 0; j < num_offsets; ++j) {
+                    file.seekg(morph_index_size + 12 + 12, std::ios::cur);
+                }
+                break;
+            }
+            default: {
+                file.seekg(0, std::ios::cur);
+                break;
+            }
+        }
+        data.morph_defs.push_back(m);
     }
 
     return data;

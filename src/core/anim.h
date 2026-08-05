@@ -17,6 +17,17 @@ struct BoneTrack {
     std::vector<BoneKeyframe> keyframes;
 };
 
+struct MorphKeyframe {
+    int frame{0};
+    float weight{0.0f};
+};
+
+struct MorphTrack {
+    std::string morph_name;
+    std::vector<MorphKeyframe> keyframes;
+};
+
 struct Animation {
     std::vector<BoneTrack> tracks;
+    std::vector<MorphTrack> morph_tracks;
 };

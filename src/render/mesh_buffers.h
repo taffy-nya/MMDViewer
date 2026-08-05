@@ -21,6 +21,7 @@ public:
 
     void bind() const { glBindVertexArray(vao_); }
     void update_bone_matrices(const std::vector<glm::mat4>& mats);
+    void update_vertices(const std::vector<Vertex>& vertices);
     int index_count() const { return index_count_; }
 
 private:

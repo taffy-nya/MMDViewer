@@ -33,7 +33,7 @@ FetchContent_MakeAvailable(imgui)
 
 FetchContent_Declare(imguizmo
     GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo.git
-    GIT_TAG master
+    GIT_TAG 1.10
     SOURCE_SUBDIR ""
 )
 FetchContent_MakeAvailable(imguizmo)

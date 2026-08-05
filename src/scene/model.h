@@ -3,6 +3,7 @@
 #include "core/texture.h"
 #include "animation/skeleton.h"
 #include "animation/anim_player.h"
+#include "animation/morph.h"
 #include "render/model_renderer.h"
 #include <expected>
 #include <memory>
@@ -31,6 +32,7 @@ public:
 
     auto load_motion(const std::string& path) -> std::expected<void, std::string>;
     void update_anim(float dt);
+    void update_morphs();
     void update_bones();
     void reset_pose();
 
@@ -52,6 +54,7 @@ public:
     float current_frame{0};
 
     AnimPlayer& anim_player() { return anim_player_; }
+    MorphController& morph_ctrl() { return morph_ctrl_; }
 
 private:
     ModelData data_;
@@ -60,4 +63,7 @@ private:
     TextureCache tex_cache_;
     std::unique_ptr<render::ModelRenderer> renderer_;
     AnimPlayer anim_player_;
+    MorphController morph_ctrl_;
+    std::vector<Vertex> morphed_vertices_;
+    std::vector<Material> morphed_materials_;
 };

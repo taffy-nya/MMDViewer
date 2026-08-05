@@ -38,6 +38,7 @@ uniform sampler2D textureSampler; // 基础纹理
 uniform bool hasTexture;          // 是否有基础纹理
 uniform sampler2D toonSampler;    // Toon 渐变纹理
 uniform sampler2DShadow shadowMap;// 阴影深度贴图
+uniform bool receiveShadow;         // 材质是否接收阴影 (PMX draw_flags & 0x08)
 
 // 阴影计算函数
 // fragPosLightSpace 为光空间中 frag 的位置
@@ -116,8 +117,7 @@ void main() {
         vec3 toonColor = texture(toonSampler, vec2(0.5, lightIntensity)).rgb;
         
         float shadow = 0.0;
-        // 计算阴影 (仅对第一个平行光计算阴影)
-        if (i == 0 && lights[i].type == 0) { 
+        if (receiveShadow && i == 0 && lights[i].type == 0) { 
             shadow = ShadowCalculation(FragPosLightSpace, norm, lightDir);
         }
 

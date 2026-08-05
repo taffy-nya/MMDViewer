@@ -16,7 +16,7 @@ auto MeshBuffers::create(const ModelData& data) -> std::expected<MeshBuffers, st
 
     glGenBuffers(1, &mb.vbo_);
     glBindBuffer(GL_ARRAY_BUFFER, mb.vbo_);
-    glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(Vertex), verts.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(Vertex), verts.data(), GL_DYNAMIC_DRAW);
 
     glGenBuffers(1, &mb.ebo_);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mb.ebo_);
@@ -92,6 +92,12 @@ void MeshBuffers::update_bone_matrices(const std::vector<glm::mat4>& mats) {
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_BUFFER, bone_tex_);
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, bone_tbo_);
+}
+
+void MeshBuffers::update_vertices(const std::vector<Vertex>& vertices) {
+    if (vbo_ == 0) return;
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(Vertex), vertices.data());
 }
 
 } // namespace render

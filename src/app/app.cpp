@@ -20,6 +20,7 @@
 void render_general_panel(App& app);
 void render_model_panel(App& app, GLFWwindow* win);
 void render_skeleton_panel(App& app);
+void render_morph_panel(App& app);
 void render_stage_panel(App& app, GLFWwindow* win);
 void render_lighting_panel(App& app);
 
@@ -155,6 +156,7 @@ void App::run() {
             model_->is_playing = is_playing;
             model_->manual_bone_control = manual_bone_control;
             model_->update_anim(dt);
+            model_->update_morphs();
             model_->update_bones();
         }
 
@@ -260,6 +262,10 @@ void App::render_ui() {
         }
         if (ImGui::BeginTabItem("Skeleton")) {
             render_skeleton_panel(*this);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Morph")) {
+            render_morph_panel(*this);
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Stage")) {

@@ -4,37 +4,40 @@
 #include "core/texture.h"
 #include "core/light.h"
 #include <iterator>
+#include <format>
 #include <glm/gtc/type_ptr.hpp>
+#include "stb_image.h"
 
 namespace render {
 
 void ModelRenderer::cache_main_uniforms() {
     for (int i = 0; i < 16; ++i) {
         const std::string base = "lights[" + std::to_string(i) + "]";
-        light_locs_[i].position  = main_shader_.uniform((base + ".position").c_str());
-        light_locs_[i].direction = main_shader_.uniform((base + ".direction").c_str());
-        light_locs_[i].color     = main_shader_.uniform((base + ".color").c_str());
-        light_locs_[i].intensity = main_shader_.uniform((base + ".intensity").c_str());
-        light_locs_[i].type      = main_shader_.uniform((base + ".type").c_str());
-        light_locs_[i].constant  = main_shader_.uniform((base + ".constant").c_str());
-        light_locs_[i].linear    = main_shader_.uniform((base + ".linear").c_str());
-        light_locs_[i].quadratic = main_shader_.uniform((base + ".quadratic").c_str());
-        light_locs_[i].enabled   = main_shader_.uniform((base + ".enabled").c_str());
+        light_locs_[i].position  = main_shader_.uniform(base + ".position");
+        light_locs_[i].direction = main_shader_.uniform(base + ".direction");
+        light_locs_[i].color     = main_shader_.uniform(base + ".color");
+        light_locs_[i].intensity = main_shader_.uniform(base + ".intensity");
+        light_locs_[i].type      = main_shader_.uniform(base + ".type");
+        light_locs_[i].constant  = main_shader_.uniform(base + ".constant");
+        light_locs_[i].linear    = main_shader_.uniform(base + ".linear");
+        light_locs_[i].quadratic = main_shader_.uniform(base + ".quadratic");
+        light_locs_[i].enabled   = main_shader_.uniform(base + ".enabled");
     }
+    main_shader_.uniform("receiveShadow");
 }
 
 void ModelRenderer::cache_edge_uniforms() {
     for (int i = 0; i < 16; ++i) {
         const std::string base = "lights[" + std::to_string(i) + "]";
-        edge_light_locs_[i].position  = edge_shader_.uniform((base + ".position").c_str());
-        edge_light_locs_[i].direction = edge_shader_.uniform((base + ".direction").c_str());
-        edge_light_locs_[i].color     = edge_shader_.uniform((base + ".color").c_str());
-        edge_light_locs_[i].intensity = edge_shader_.uniform((base + ".intensity").c_str());
-        edge_light_locs_[i].type      = edge_shader_.uniform((base + ".type").c_str());
-        edge_light_locs_[i].constant  = edge_shader_.uniform((base + ".constant").c_str());
-        edge_light_locs_[i].linear    = edge_shader_.uniform((base + ".linear").c_str());
-        edge_light_locs_[i].quadratic = edge_shader_.uniform((base + ".quadratic").c_str());
-        edge_light_locs_[i].enabled   = edge_shader_.uniform((base + ".enabled").c_str());
+        edge_light_locs_[i].position  = edge_shader_.uniform(base + ".position");
+        edge_light_locs_[i].direction = edge_shader_.uniform(base + ".direction");
+        edge_light_locs_[i].color     = edge_shader_.uniform(base + ".color");
+        edge_light_locs_[i].intensity = edge_shader_.uniform(base + ".intensity");
+        edge_light_locs_[i].type      = edge_shader_.uniform(base + ".type");
+        edge_light_locs_[i].constant  = edge_shader_.uniform(base + ".constant");
+        edge_light_locs_[i].linear    = edge_shader_.uniform(base + ".linear");
+        edge_light_locs_[i].quadratic = edge_shader_.uniform(base + ".quadratic");
+        edge_light_locs_[i].enabled   = edge_shader_.uniform(base + ".enabled");
     }
 }
 
@@ -51,12 +54,12 @@ void ModelRenderer::set_lights_uniforms(std::span<const LightLocs> locs, const s
         glUniform3fv(l.position,  1, glm::value_ptr(light.position));
         glUniform3fv(l.direction, 1, glm::value_ptr(light.direction));
         glUniform3fv(l.color,     1, glm::value_ptr(light.color));
-        glUniform1f(l.intensity, light.intensity);
-        glUniform1i(l.type,     light.type);
-        glUniform1f(l.constant,  light.constant);
-        glUniform1f(l.linear,    light.linear);
-        glUniform1f(l.quadratic, light.quadratic);
-        glUniform1i(l.enabled,  light.enabled);
+        glUniform1f(l.intensity,  light.intensity);
+        glUniform1i(l.type,       light.type);
+        glUniform1f(l.constant,   light.constant);
+        glUniform1f(l.linear,     light.linear);
+        glUniform1f(l.quadratic,  light.quadratic);
+        glUniform1i(l.enabled,    light.enabled);
     }
 }
 
@@ -85,18 +88,40 @@ auto ModelRenderer::create(const ModelData& data)
 
     glGenTextures(1, &r.default_toon_tex_);
     glBindTexture(GL_TEXTURE_2D, r.default_toon_tex_);
-    unsigned char white_pixel[3] = {255, 255, 255};
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, white_pixel);
+    unsigned char default_toon[3] = { 255, 255, 255 }; 
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, default_toon);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    r.shared_toon_texs_.resize(k_shared_toon_count, 0);
+    stbi_set_flip_vertically_on_load(true);
+    for (int i = 0; i < k_shared_toon_count; ++i) {
+        std::string path = std::format("toons/toon{:02d}.bmp", i + 1);
+        int w, h, ch;
+        unsigned char* data = stbi_load(path.c_str(), &w, &h, &ch, 0);
+        if (data) {
+            GLenum fmt = (ch == 4) ? GL_RGBA : GL_RGB;
+            glGenTextures(1, &r.shared_toon_texs_[i]);
+            glBindTexture(GL_TEXTURE_2D, r.shared_toon_texs_[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(fmt), w, h, 0, fmt, GL_UNSIGNED_BYTE, data);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            stbi_image_free(data);
+        }
+    }
 
     return r;
 }
 
 ModelRenderer::~ModelRenderer() {
     if (default_toon_tex_ != 0) glDeleteTextures(1, &default_toon_tex_);
+    for (auto t : shared_toon_texs_) {
+        if (t != 0) glDeleteTextures(1, &t);
+    }
 }
 
 ModelRenderer::ModelRenderer(ModelRenderer&& other) noexcept
@@ -104,7 +129,8 @@ ModelRenderer::ModelRenderer(ModelRenderer&& other) noexcept
     , edge_shader_(std::move(other.edge_shader_))
     , shadow_shader_(std::move(other.shadow_shader_))
     , buffers_(std::move(other.buffers_))
-    , default_toon_tex_(other.default_toon_tex_) {
+    , default_toon_tex_(other.default_toon_tex_)
+    , shared_toon_texs_(std::move(other.shared_toon_texs_)) {
     for (int i = 0; i < 16; ++i) {
         light_locs_[i] = other.light_locs_[i];
         edge_light_locs_[i] = other.edge_light_locs_[i];
@@ -115,11 +141,15 @@ ModelRenderer::ModelRenderer(ModelRenderer&& other) noexcept
 ModelRenderer& ModelRenderer::operator=(ModelRenderer&& other) noexcept {
     if (this != &other) {
         if (default_toon_tex_ != 0) glDeleteTextures(1, &default_toon_tex_);
+        for (auto t : shared_toon_texs_) {
+            if (t != 0) glDeleteTextures(1, &t);
+        }
         main_shader_ = std::move(other.main_shader_);
         edge_shader_ = std::move(other.edge_shader_);
         shadow_shader_ = std::move(other.shadow_shader_);
         buffers_ = std::move(other.buffers_);
         default_toon_tex_ = other.default_toon_tex_;
+        shared_toon_texs_ = std::move(other.shared_toon_texs_);
         for (int i = 0; i < 16; ++i) {
             light_locs_[i] = other.light_locs_[i];
             edge_light_locs_[i] = other.edge_light_locs_[i];
@@ -137,12 +167,17 @@ void ModelRenderer::draw(const ModelData& data,
                          const std::vector<Light>& lights,
                          const glm::vec3& ambient, float ambient_strength,
                          GLuint shadow_map, const glm::mat4& light_space,
-                         float brightness) {
+                         float brightness,
+                         const std::vector<Vertex>* morphed_vertices,
+                         const std::vector<Material>* morphed_materials) {
     glm::mat4 view = camera.get_view_matrix();
     glm::mat4 proj = camera.get_projection_matrix();
     glm::vec3 view_pos = camera.position;
 
     buffers_.bind();
+    if (morphed_vertices) {
+        buffers_.update_vertices(*morphed_vertices);
+    }
     if (!bone_mats.empty()) {
         buffers_.update_bone_matrices(bone_mats);
     }
@@ -160,8 +195,15 @@ void ModelRenderer::draw(const ModelData& data,
     edge_shader_.set_int("numLights", static_cast<int>(lights.size()));
     set_lights_uniforms(edge_light_locs_, lights);
 
+    const auto& edge_mats = (morphed_materials && !morphed_materials->empty())
+        ? *morphed_materials : data.materials;
+
     unsigned int face_offset = 0;
-    for (const auto& mat : data.materials) {
+    for (const auto& mat : edge_mats) {
+        if (!(mat.draw_flags & 0x10)) {   // 0x10: エッジ有効 (绘制描边)
+            face_offset += mat.face_count;
+            continue;
+        }
         edge_shader_.set_float("edge_size", mat.edge_size * 0.03f);
         edge_shader_.set_vec4("edge_color", mat.edge_color);
         glDrawElements(GL_TRIANGLES, mat.face_count, GL_UNSIGNED_INT,
@@ -192,8 +234,12 @@ void ModelRenderer::draw(const ModelData& data,
     main_shader_.set_int("textureSampler", 0);
     main_shader_.set_int("toonSampler", 1);
 
+    const auto& main_mats = (morphed_materials && !morphed_materials->empty())
+        ? *morphed_materials : data.materials;
+
     face_offset = 0;
-    for (const auto& mat : data.materials) {
+    for (const auto& mat : main_mats) {
+        main_shader_.set_int("receiveShadow", (mat.draw_flags & 0x08) ? 1 : 0); // 0x08: セルフシャドウ (receive shadow)
         main_shader_.set_vec4("objectColor", mat.diffuse);
         main_shader_.set_float("shininess", mat.shininess);
         main_shader_.set_vec3("specularColor", mat.specular);
@@ -208,14 +254,18 @@ void ModelRenderer::draw(const ModelData& data,
 
         glActiveTexture(GL_TEXTURE1);
         if (mat.use_shared_toon) {
-            glBindTexture(GL_TEXTURE_2D, default_toon_tex_);
+            int idx = mat.toon_tex_idx;
+            if (idx >= 0 && idx < k_shared_toon_count && shared_toon_texs_[idx] != 0)
+                glBindTexture(GL_TEXTURE_2D, shared_toon_texs_[idx]);
+            else
+                glBindTexture(GL_TEXTURE_2D, default_toon_tex_);
         } else if (mat.toon_tex_idx >= 0 && mat.toon_tex_idx < static_cast<int>(textures.size())) {
             glBindTexture(GL_TEXTURE_2D, textures[mat.toon_tex_idx].gl_texture_id);
         } else {
             glBindTexture(GL_TEXTURE_2D, default_toon_tex_);
         }
 
-        if (mat.draw_flags & 0x01) {
+        if (mat.draw_flags & 0x01) {    // 0x01: 両面描画 (双面渲染)
             glDisable(GL_CULL_FACE);
         } else {
             glEnable(GL_CULL_FACE);
@@ -234,11 +284,15 @@ void ModelRenderer::draw(const ModelData& data,
 void ModelRenderer::draw_shadow(const ModelData& data,
                                 const glm::mat4& model_matrix,
                                 const std::vector<glm::mat4>& bone_mats,
-                                const glm::mat4& light_space) {
+                                const glm::mat4& light_space,
+                                const std::vector<Vertex>* morphed_vertices) {
     shadow_shader_.use();
     shadow_shader_.set_mat4("model", model_matrix);
     shadow_shader_.set_mat4("lightSpaceMatrix", light_space);
 
+    if (morphed_vertices) {
+        buffers_.update_vertices(*morphed_vertices);
+    }
     buffers_.update_bone_matrices(bone_mats);
     shadow_shader_.set_int("boneMatrices", 2);
 
@@ -246,6 +300,10 @@ void ModelRenderer::draw_shadow(const ModelData& data,
 
     unsigned int face_offset = 0;
     for (const auto& mat : data.materials) {
+        if (!(mat.draw_flags & 0x04)) {   // 0x04: セルフシャドウマップ (产生阴影)
+            face_offset += mat.face_count;
+            continue;
+        }
         if (mat.draw_flags & 0x01) {
             glDisable(GL_CULL_FACE);
         } else {

@@ -35,12 +35,15 @@ public:
               const std::vector<Light>& lights,
               const glm::vec3& ambient, float ambient_strength,
               GLuint shadow_map, const glm::mat4& light_space,
-              float brightness = 1.0f);
+              float brightness = 1.0f,
+              const std::vector<Vertex>* morphed_vertices = nullptr,
+              const std::vector<Material>* morphed_materials = nullptr);
 
     void draw_shadow(const ModelData& data,
                      const glm::mat4& model_matrix,
                      const std::vector<glm::mat4>& bone_mats,
-                     const glm::mat4& light_space);
+                     const glm::mat4& light_space,
+                     const std::vector<Vertex>* morphed_vertices = nullptr);
 
 private:
     Shader main_shader_;
@@ -59,6 +62,8 @@ private:
     void set_lights_uniforms(std::span<const LightLocs> locs, const std::vector<Light>& lights);
 
     GLuint default_toon_tex_ = 0;
+    std::vector<GLuint> shared_toon_texs_;
+    static constexpr int k_shared_toon_count = 10;
 };
 
 } // namespace render

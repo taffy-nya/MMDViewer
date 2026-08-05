@@ -41,15 +41,15 @@ Stage::Stage(float size, int divisions) : size_(size) {
 
     for (int i = 0; i < 16; ++i) {
         std::string base = "lights[" + std::to_string(i) + "]";
-        plane_light_locs_[i].position  = plane_shader_.uniform((base + ".position").c_str());
-        plane_light_locs_[i].direction = plane_shader_.uniform((base + ".direction").c_str());
-        plane_light_locs_[i].color     = plane_shader_.uniform((base + ".color").c_str());
-        plane_light_locs_[i].intensity = plane_shader_.uniform((base + ".intensity").c_str());
-        plane_light_locs_[i].type      = plane_shader_.uniform((base + ".type").c_str());
-        plane_light_locs_[i].constant  = plane_shader_.uniform((base + ".constant").c_str());
-        plane_light_locs_[i].linear    = plane_shader_.uniform((base + ".linear").c_str());
-        plane_light_locs_[i].quadratic = plane_shader_.uniform((base + ".quadratic").c_str());
-        plane_light_locs_[i].enabled   = plane_shader_.uniform((base + ".enabled").c_str());
+        plane_light_locs_[i].position  = plane_shader_.uniform(base + ".position");
+        plane_light_locs_[i].direction = plane_shader_.uniform(base + ".direction");
+        plane_light_locs_[i].color     = plane_shader_.uniform(base + ".color");
+        plane_light_locs_[i].intensity = plane_shader_.uniform(base + ".intensity");
+        plane_light_locs_[i].type      = plane_shader_.uniform(base + ".type");
+        plane_light_locs_[i].constant  = plane_shader_.uniform(base + ".constant");
+        plane_light_locs_[i].linear    = plane_shader_.uniform(base + ".linear");
+        plane_light_locs_[i].quadratic = plane_shader_.uniform(base + ".quadratic");
+        plane_light_locs_[i].enabled   = plane_shader_.uniform(base + ".enabled");
     }
 
     shadow_loc_model_          = shadow_shader_.uniform("model");

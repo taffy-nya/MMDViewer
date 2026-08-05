@@ -13,6 +13,7 @@ auto Model::load(const std::string& path) -> std::expected<Model, std::string> {
     m.data_ = std::move(*result);
 
     m.skeleton_.init(m.data_.bone_defs);
+    m.morph_ctrl_.init(m.data_);
 
     auto last_slash = path.rfind('/');
     if (last_slash == std::string::npos) last_slash = path.rfind('\\');
@@ -42,7 +43,8 @@ auto Model::load_motion(const std::string& path) -> std::expected<void, std::str
     auto anim_result = core::load_vmd(path);
     if (!anim_result) return std::unexpected(anim_result.error());
     if (data_.bone_defs.empty()) return std::unexpected("No model loaded");
-    auto result = anim_player_.set_anim(*anim_result, data_.bone_defs);
+    morph_ctrl_.reset();
+    auto result = anim_player_.set_anim(*anim_result, data_.bone_defs, data_.morph_defs);
     if (!result) return std::unexpected(result.error());
     current_frame = 0;
     return {};
@@ -56,9 +58,26 @@ void Model::update_anim(float dt) {
                 current_frame = 0;
             }
             anim_player_.update(current_frame, data_.bone_defs, skeleton_);
+            anim_player_.update_morphs(current_frame, morph_ctrl_);
         }
     } else if (!enable_motion && !manual_bone_control) {
         skeleton_.reset_pose();
+    }
+}
+
+void Model::update_morphs() {
+    morph_ctrl_.resolve(data_);
+    morph_ctrl_.apply_bone_morphs(data_, skeleton_.states());
+    if (morph_ctrl_.is_vertex_uv_dirty()) {
+        morphed_vertices_ = data_.vertices;
+        morph_ctrl_.apply_vertex_morphs(data_, morphed_vertices_);
+        morph_ctrl_.apply_uv_morphs(data_, morphed_vertices_);
+    }
+    if (!data_.morph_defs.empty()) {
+        morphed_materials_ = data_.materials;
+        for (int i = 0; i < static_cast<int>(morphed_materials_.size()); ++i) {
+            morph_ctrl_.apply_material(data_, i, morphed_materials_[i]);
+        }
     }
 }
 
@@ -101,12 +120,15 @@ void Model::draw(const Camera& camera,
                  GLuint shadow_map, const glm::mat4& light_space) {
     if (!renderer_) return;
     auto bone_mats = data_.bone_defs.empty() ? std::vector<glm::mat4>{} : skeleton_.get_bone_matrices();
+    const auto* verts = morph_ctrl_.is_vertex_uv_dirty() ? &morphed_vertices_ : nullptr;
+    const auto* mats = (!morphed_materials_.empty()) ? &morphed_materials_ : nullptr;
     renderer_->draw(data_, textures_, camera, model_matrix(), bone_mats, lights,
-                    ambient, ambient_strength, shadow_map, light_space);
+                    ambient, ambient_strength, shadow_map, light_space, 1.0f, verts, mats);
 }
 
 void Model::draw_shadow(const glm::mat4& light_space) {
     if (!renderer_) return;
     auto bone_mats = data_.bone_defs.empty() ? std::vector<glm::mat4>{} : skeleton_.get_bone_matrices();
-    renderer_->draw_shadow(data_, model_matrix(), bone_mats, light_space);
+    const auto* verts = morph_ctrl_.is_vertex_uv_dirty() ? &morphed_vertices_ : nullptr;
+    renderer_->draw_shadow(data_, model_matrix(), bone_mats, light_space, verts);
 }
